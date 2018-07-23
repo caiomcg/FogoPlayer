@@ -28,7 +28,13 @@ BUILDLIST := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(INCDIRS))
 
 FFMPEG_PATH=$(HOME)/ffmpeg
 FFMPEG_CONFIG_OPTS += --enable-gpl
-FFMPEG_CONFIG_OPTS += --enable-shared --disable-static
+FFMPEG_CONFIG_OPTS += --enable-shared --disable-static --enable-avfilter --enable-swscale --enable-postproc
+FFMPEG_CONFIG_OPTS += --enable-libx264 --enable-libx265 --enable-libvpx #--enable-libjack
+FFMPEG_CONFIG_OPTS += --enable-muxer=h264 --enable-demuxer=h264 --enable-decoder=h264
+FFMPEG_CONFIG_OPTS += --enable-muxer=hevc --enable-demuxer=hevc --enable-decoder=hevc
+FFMPEG_CONFIG_OPTS += --enable-decoder=vp8
+FFMPEG_CONFIG_OPTS += --enable-decoder=vp9
+FFMPEG_CONFIG_OPTS += --enable-muxer=webm
 FFMPEG_CONFIG_OPTS += --disable-doc
 FFMPEG_CONFIG_OPTS += --enable-postproc
 
