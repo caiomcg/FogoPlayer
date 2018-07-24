@@ -17,7 +17,7 @@ INSTALLBINDIR := /usr/local/bin
 
 # Code Lists
 SRCEXT := cpp
-HEADEREXT := h
+HEADEREXT := hpp
 SOURCES := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 
@@ -38,12 +38,24 @@ FFMPEG_CONFIG_OPTS += --enable-muxer=webm
 FFMPEG_CONFIG_OPTS += --disable-doc
 FFMPEG_CONFIG_OPTS += --enable-postproc
 
-PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev yasm
+OPENCV_PATH=$(HOME)/opencv
+
+OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+FFMPEG_PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev yasm
+POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgtkglextmm-x11-1.2-dev libusb-1.0-0 #libavcodec-ffmpeg56 libavformat-ffmpeg56 libswscale-ffmpeg3 libswresample-ffmpeg1 libavutil-ffmpeg54
+
+PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(POINT_GREY_PACKAGES)
 
 # Shared Compiler Flags
 CFLAGS := -std=c++11 -O3 -Wall -Wextra
 INC := -I include $(INCLIST) -I /usr/local/include
-LIB := -lasound -pthread `pkg-config --libs libavformat` `pkg-config --libs libavdevice` `pkg-config --libs libavcodec` `pkg-config --libs libavutil` `pkg-config --libs libswscale` `pkg-config --libs libswresample`  -lm -lrt
+
+FFMPEG_LIB += `pkg-config --libs libavformat` `pkg-config --libs libavdevice` `pkg-config --libs libavcodec` `pkg-config --libs libavutil` `pkg-config --libs libswscale` `pkg-config --libs libswresample` 
+OPENCV_LIB += `pkg-config --libs opencv`
+ALSA_LIB += -lasound 
+ZBAR_LIB += -lzbar
+
+LIB := -pthread -lm -lrt  $(FFMPEG_LIB) $(OPENCV_LIB) $(ALSA_LIB) $(ZBAR_LIB)
 
 ifeq ($(debug), 1)
 CFLAGS += -g -ggdb3 -D DEBUG
