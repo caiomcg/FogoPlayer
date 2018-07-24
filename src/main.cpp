@@ -21,24 +21,71 @@
  */
 
 #include <iostream>
+#include <memory>
 
-#include "Utils/ArgumentParser.h"
+#include "Utils/ArgumentParser.hpp"
+#include "InputMedia/OpenCV/CameraInput.hpp"
+#include "InputMedia/LibAV/FileInput.hpp"
+#include "Synchronizer/Synchronizer.hpp"
 
 void usage() {
-    // Fill in software usage
+    std::cout << "\033[1;37mNAME\033[0m" << std::endl;
+    std::cout << "        FogoPlayer - A complete distributed video player" << std::endl;
+	std::cout << "\033[1;37mSYNOPSIS\033[0m" << std::endl;
+    std::cout << "        FogoPlayer [OPTIONS]... [OUTPUTS]..." << std::endl;
+    std::cout << "\033[1;37mDESCRIPTION\033[0m" << std::endl;
+    std::cout << "        -i or --input" << std::endl;
+    std::cout << "            Path to the input device or input file. Depends on the mode of operation, for more information refer to the README file." << std::endl;
+    std::cout << "        -s or --stream" << std::endl;
+    std::cout << "            Enables the streming mode" << std::endl;
+    std::cout << "        -r or --receiver" << std::endl;
+    std::cout << "            Enables the receiving mode" << std::endl;
+    std::cout << "        -c or --cutter" << std::endl;
+    std::cout << "            Enables the video cutter" << std::endl;
+    std::cout << "\033[1;37mEXIT STATUS\033[0m" << std::endl;
+    std::cout << "        0 - Exited normally" << std::endl;
+    std::cout << "        1 - An error occured" << std::endl;
+    std::cout << "\033[1;37mUSE EXAMPLE\033[0m" << std::endl;
+    std::cout << "        \033[0;35m\033[0m" << std::endl;
 }
+int main(int argc, char** argv) {  
+    std::string current_arg;
+    std::string input_file;
 
-int main(int argc, char** argv) {   
+    std::map<char, std::string>::iterator argument;
+
     struct option long_options[] = {
         {"input",     required_argument, 0,  'i' },
+        {"stream",     no_argument, 0,  's' },
+        {"receiver",     no_argument, 0,  'r' },
+        {"cutter",     no_argument, 0,  'c' },
         {0,                           0, 0,   0  }
     };
 
-    auto args = ArgumentParser("i:", long_options).parse(argc, &argv);
+    auto args = ArgumentParser("i:src", long_options).parse(argc, &argv);
     
     if (args.size() < 1) {
         usage();
         return 1;
+    }
+
+    if ((argument = args.find('i')) != args.end()) {
+        input_file = argument->second;
+    } else {
+        std::cerr << "An input is required" << std::endl;
+        return 1;
+    }
+
+    if ((argument = args.find('s')) != args.end()) {
+        std::cout << "Initializing streaming mode ";
+    } else if ((argument = args.find('r')) != args.end()) {
+        std::cout << "Initializing receiver mode ";
+    } else if ((argument = args.find('c')) != args.end()) {
+        std::cout << "Initializing video cutter ";
+    } else {
+        Synchronizer synchronizer{};
+        synchronizer.setInputMedia(std::unique_ptr<OpencvInputMedia>(new CameraInput()))
+            .spawn(input_file).join();
     }
 
     return 0;
