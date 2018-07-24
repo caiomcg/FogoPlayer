@@ -20,24 +20,26 @@
  * @author Caio Marcelo Campoy Guedes <caiomcg@gmail.com>
  */
 
-#include "ArgumentParser.h"
+#include "ArgumentParser.hpp"
+
+#include <iostream>
 
 ArgumentParser::ArgumentParser(const std::string& opt_list, struct option* options) {
     this->opt_list_ = opt_list;
     this->options_  = options;
 }
 
-std::map<char, char*> ArgumentParser::parse(int& argc, char*** argv) {
+std::map<char, std::string> ArgumentParser::parse(int& argc, char*** argv) {
     char option = 0;
     int optindex = 0;
 
-    std::map<char, char*> args;
+    std::map<char, std::string> args;
 
     while ((option = getopt_long(argc, *argv, this->opt_list_.c_str(), this->options_, &optindex)) != -1) {
         if (option == '?') {
             continue;
         }
-        args.insert(std::pair<char, char*>(option, optarg));
+        args.insert(std::pair<char, std::string>(option, optarg == nullptr ? "" : optarg));
     }
     
     *argv += optind;
