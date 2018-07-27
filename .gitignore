@@ -33,3 +33,5 @@
 
 # Folders
 /.vscode
+/bin
+/build

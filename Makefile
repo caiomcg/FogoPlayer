@@ -40,7 +40,9 @@ FFMPEG_CONFIG_OPTS += --enable-postproc
 
 OPENCV_PATH=$(HOME)/opencv
 
-OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+#Opencv compile line cmake -DWITH_LIBV4L=ON ../ -DCMAKE_BUILD_TYPE=Release 
+
+OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libv4l-dev
 FFMPEG_PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev yasm
 POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgtkglextmm-x11-1.2-dev libusb-1.0-0 #libavcodec-ffmpeg56 libavformat-ffmpeg56 libswscale-ffmpeg3 libswresample-ffmpeg1 libavutil-ffmpeg54
 
@@ -70,7 +72,7 @@ $(TARGET): $(OBJECTS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 	@mkdir -p $(BUILDLIST)
-	@echo "${Y}Compiling${N} ${B}$< ${N}"; $(CC) $(CFLAGS) $(INC) -c -o $@ $<
+	@echo "CC    $<"; $(CC) $(CFLAGS) $(INC) -c -o $@ $<
 
 test: $(TARGET)
 	@$(MAKE) --no-print-directory -C test
