@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <exception>
+#include <iostream>
 
 FileInput::~FileInput() {}
 
@@ -9,14 +10,21 @@ void FileInput::open(const std::string& file_name) {
     char error_message[100];
     int error_code = 0;
 
-    if (avformat_open_input (&this->format_ctx_, file_name.c_str(), nullptr, nullptr) != 0) { // Open the file
-        throw std::runtime_error("OpenPCM::Cold not open input stream " + file_name); // Throw an exception if failed
+	avformat_network_init();
+
+    std::clog << "Opening input: " << file_name << std::endl;
+    if ((error_code = avformat_open_input (&this->format_ctx_, file_name.c_str(), nullptr, nullptr)) != 0) { // Open the file
+        av_strerror(error_code, error_message, 100);
+        throw std::runtime_error("OpenPCM::Cold not open input stream " + file_name + " - " + error_message); // Throw an exception if failed
     }
 
+    std::clog << "Finding stream info" << std::endl;
     if (avformat_find_stream_info(this->format_ctx_, nullptr) < 0) { // Find the best stream information
         throw std::runtime_error("Could not fetch stream info"); // Throw an exception if failed
     }
 
+    av_dump_format(this->format_ctx_, 0, "Teste", 0);
+    
     int pcm_stream_index = av_find_best_stream(this->format_ctx_, AVMEDIA_TYPE_VIDEO, -1, -1, &(this->codec_), 0); // Search for the best stream and store its index
 
     if (pcm_stream_index < 0) {
@@ -47,5 +55,14 @@ void FileInput::open(const std::string& file_name) {
 }
 
 AVPacket* FileInput::read() {
+    int status_code = 0;
+
+    AVPacket* packet = av_packet_alloc();
+
+    if ((status_code = av_read_frame(this->format_ctx_, packet)) == 0) { // Blocking
+        return packet;
+    }
+
+    av_packet_free(&packet);
     return nullptr;
 }

@@ -36,9 +36,9 @@ extern "C" {
     #include <libavcodec/avcodec.h>
 }
 
-#include "LibavInputMedia.hpp"
+#include "LibAVInputMedia.hpp"
 
-class FileInput : public LibavInputMedia {
+class FileInput : public LibAVInputMedia {
 public:
     virtual ~FileInput() override;
     void open(const std::string& file_name) override;

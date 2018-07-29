@@ -36,14 +36,14 @@ extern "C" {
     #include <libavcodec/avcodec.h>
 }
 
-class LibavInputMedia : public InputMedia {
+class LibAVInputMedia : public InputMedia {
 protected:
     AVFormatContext* format_ctx_;
     AVCodecContext* codec_ctx_;
     AVCodec* codec_;
     AVStream* stream_;
 public:
-    virtual ~LibavInputMedia() {}
+    virtual ~LibAVInputMedia() {}
 
     AVFormatContext* getFormatContext() const {
         return format_ctx_;

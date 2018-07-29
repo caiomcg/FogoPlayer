@@ -20,9 +20,14 @@
  * @author Caio Marcelo Campoy Guedes <caiomcg@gmail.com>
  */
 
+
+#include <unistd.h>
+#include <errno.h>
+
 #include <iostream>
 #include <memory>
 
+#include "Receiver.hpp"
 #include "Utils/ArgumentParser.hpp"
 #include "InputMedia/OpenCV/CameraInput.hpp"
 #include "InputMedia/LibAV/FileInput.hpp"
@@ -48,7 +53,9 @@ void usage() {
     std::cout << "\033[1;37mUSE EXAMPLE\033[0m" << std::endl;
     std::cout << "        \033[0;35m\033[0m" << std::endl;
 }
+
 int main(int argc, char** argv) {  
+    int niceness = 0;
     std::string current_arg;
     std::string input_file;
 
@@ -68,6 +75,10 @@ int main(int argc, char** argv) {
         usage();
         return 1;
     }
+    
+    if ((niceness = nice(1)) == -1) {
+        std::cerr << "Could not set higher priority to the process " << strerror(errno) << std::endl;
+    }
 
     if ((argument = args.find('i')) != args.end()) {
         input_file = argument->second;
@@ -79,7 +90,9 @@ int main(int argc, char** argv) {
     if ((argument = args.find('s')) != args.end()) {
         std::cout << "Initializing streaming mode ";
     } else if ((argument = args.find('r')) != args.end()) {
-        std::cout << "Initializing receiver mode ";
+        std::cout << "Initializing receiver mode " << std::endl;
+        Receiver receiver{};
+        receiver.spawn(input_file).join();
     } else if ((argument = args.find('c')) != args.end()) {
         std::cout << "Initializing video cutter ";
     } else {
