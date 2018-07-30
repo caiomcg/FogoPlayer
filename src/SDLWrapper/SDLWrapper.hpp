@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <thread>
+#include <chrono>
 #include <memory>
 
 #include <SDL2/SDL.h>

@@ -8,7 +8,7 @@ void SoftwareDecoder::run() {
     AVFrame*  frame  = nullptr;
 
     while ((frame = this->decode()) != nullptr) {
-        this->raw_output_queue_->put(frame);
+        this->raw_output_queue_->put(&frame);
     }
 
     this->raw_output_queue_->put(nullptr);
