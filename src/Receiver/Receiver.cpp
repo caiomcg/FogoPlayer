@@ -42,7 +42,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     while ((packet = this->input_media_->read()) != nullptr && keep_alive_) {
         if (packet->stream_index == 0) {
             raw_packet_queue->put(&packet);
-            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
     }
 }

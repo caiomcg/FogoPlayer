@@ -23,6 +23,7 @@ AVFrame* SoftwareDecoder::decode() {
     while ((packet = this->raw_packet_queue_->take()) != nullptr) {
         if ((av_status = avcodec_send_packet(this->codec_ctx_, packet)) == 0) {
             if ((av_status = avcodec_receive_frame(this->codec_ctx_, frame)) == 0) {
+                std::clog << "PTS: " << frame->pts << " frame number: " << this->codec_ctx_->frame_number << " cpn: " << frame->coded_picture_number << " dpn: " << frame->display_picture_number << std::endl;
                 av_packet_unref(packet);
                 return frame;
             } else {

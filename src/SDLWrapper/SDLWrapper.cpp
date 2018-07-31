@@ -8,7 +8,7 @@ SDLWrapper::SDLWrapper(LibAVInputMedia* input_media, std::shared_ptr<RingQueue<A
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1); // TODO: Decide the appropriate opengl options
 
-    if (!(this->window_ = SDL_CreateWindow("FogoPlayer", 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_RESIZABLE |SDL_WINDOW_OPENGL))) {
+    if (!(this->window_ = SDL_CreateWindow("FogoPlayer", 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_FULLSCREEN |SDL_WINDOW_OPENGL))) {
         SDL_Quit();
         throw std::runtime_error("Could not initialize SDL window");
     }
@@ -56,8 +56,6 @@ void SDLWrapper::run() {
         AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
 
     while ((frame = decodec_frame_queue_->take()) != nullptr) {
-        std::clog << "PTS: " << frame->pts << std::endl;
-
         sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize);
         
         SDL_UpdateTexture(this->texture_, NULL, RGB_frame->data[0], RGB_frame->linesize[0]);
