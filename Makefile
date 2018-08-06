@@ -26,7 +26,6 @@ INCDIRS := $(shell find $(SRCDIR)/**/* -name '*.$(SRCEXT)' -exec dirname {} \; |
 INCLIST := $(patsubst $(SRCDIR)/%,-I $(SRCDIR)/%,$(INCDIRS))
 BUILDLIST := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(INCDIRS))
 
-
 FFMPEG_PATH=$(HOME)/ffmpeg
 FFMPEG_CONFIG_OPTS += --enable-shared --disable-static --enable-gpl --enable-nonfree 
 #FFMPEG_CONFIG_OPTS += --enable-shared# --disable-static --enable-avfilter --enable-swscale --enable-postproc
@@ -42,14 +41,14 @@ FFMPEG_CONFIG_OPTS += --disable-doc --enable-pthreads --enable-filters
 
 OPENCV_PATH=$(HOME)/opencv
 
-#Opencv compile line cmake -DWITH_LIBV4L=ON ../ -DCMAKE_BUILD_TYPE=Release 
-
 OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libv4l-dev
 FFMPEG_PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev libvdpau-dev libva-dev yasm
 SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev
+ZBAR_PACKAGES += libzbar0 libzbar-dev
+SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev 
 POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgtkglextmm-x11-1.2-dev libusb-1.0-0 #libavcodec-ffmpeg56 libavformat-ffmpeg56 libswscale-ffmpeg3 libswresample-ffmpeg1 libavutil-ffmpeg54
 
-PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(POINT_GREY_PACKAGES)
+PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(ZBAR_PACKAGES) $(SDL_PACKAGES) $(POINT_GREY_PACKAGES)
 
 # Shared Compiler Flags
 CFLAGS := -std=c++14 -O3 -Wall -Wextra
@@ -96,14 +95,20 @@ install:
 distclean:
 	@echo "${R}Removing ${N} ${B} $(EXECUTABLE) ${N}"; rm $(INSTALLBINDIR)/$(EXECUTABLE)
 
-install-ffmpeg: install-dependencies
-	@ cd ${FFMPEG_PATH} && ./configure ${FFMPEG_CONFIG_OPTS} && make -j${MAKE_J} && sudo make install
+install-ffmpeg: install-dependencies clone-ffmpeg
+	@ cd ${FFMPEG_PATH} && ./configure ${FFMPEG_CONFIG_OPTS}  && make -j4 && sudo make install && sudo ldconfig
+
+install-opencv: install-dependencies clone-opencv
+	@ cd ${OPENCV_PATH} && mkdir -p build  && cd build && cmake -DWITH_LIBV4L=ON ../ -DCMAKE_BUILD_TYPE=Release && make -j4 && sudo make install && sudo ldconfig
 
 install-dependencies:
 	dpkg-query -W ${PACKAGES} || sudo apt-get install ${PACKAGES}
 
-clone:
+clone-ffmpeg:
 	git clone --branch n4.0 https://git.ffmpeg.org/ffmpeg.git ${FFMPEG_PATH}
+
+clone-opencv:
+	git clone --branch 3.4.2 https://github.com/opencv/opencv ${OPENCV_PATH}
 
 run:
 	${TARGET}
