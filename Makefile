@@ -27,7 +27,7 @@ INCLIST := $(patsubst $(SRCDIR)/%,-I $(SRCDIR)/%,$(INCDIRS))
 BUILDLIST := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(INCDIRS))
 
 FFMPEG_PATH=$(HOME)/ffmpeg
-FFMPEG_CONFIG_OPTS += --enable-shared --disable-static --enable-gpl --enable-nonfree 
+FFMPEG_CONFIG_OPTS += --enable-shared --disable-static --enable-gpl --enable-nonfree --enable-pthreads
 #FFMPEG_CONFIG_OPTS += --enable-shared# --disable-static --enable-avfilter --enable-swscale --enable-postproc
 FFMPEG_CONFIG_OPTS += --enable-libx264 --enable-libx265 --enable-libvpx #--enable-libjack
 #FFMPEG_CONFIG_OPTS += --enable-muxer=h264 --enable-demuxer=h264 --enable-decoder=h264
@@ -45,11 +45,9 @@ OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg
 FFMPEG_PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev libvdpau-dev libva-dev yasm
 SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev
 ZBAR_PACKAGES += libzbar0 libzbar-dev
-SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev 
 POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgtkglextmm-x11-1.2-dev libusb-1.0-0 #libavcodec-ffmpeg56 libavformat-ffmpeg56 libswscale-ffmpeg3 libswresample-ffmpeg1 libavutil-ffmpeg54
 
 PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(ZBAR_PACKAGES) $(SDL_PACKAGES) $(POINT_GREY_PACKAGES)
-
 # Shared Compiler Flags
 CFLAGS := -std=c++14 -O3 -Wall -Wextra
 INC := -I include $(INCLIST) -I /usr/local/include
@@ -106,6 +104,7 @@ install-dependencies:
 
 clone-ffmpeg:
 	git clone --branch n4.0 https://git.ffmpeg.org/ffmpeg.git ${FFMPEG_PATH}
+	git clone --branch 3.4 https://github.com/opencv/opencv.git ${OPENCV_PATH}	
 
 clone-opencv:
 	git clone --branch 3.4.2 https://github.com/opencv/opencv ${OPENCV_PATH}

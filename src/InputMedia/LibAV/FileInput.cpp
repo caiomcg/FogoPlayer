@@ -4,6 +4,10 @@
 #include <exception>
 #include <iostream>
 
+#include "libavutil/avassert.h"
+#include "libavutil/common.h"
+#include "libavutil/pixdesc.h"
+
 FileInput::~FileInput() {}
 
 void FileInput::open(const std::string& file_name) {
@@ -11,6 +15,7 @@ void FileInput::open(const std::string& file_name) {
     int error_code = 0;
 
 	avformat_network_init();
+    av_log_set_level(AV_LOG_VERBOSE);
 
     std::clog << "Opening input: " << file_name << std::endl;
     if ((error_code = avformat_open_input (&this->format_ctx_, file_name.c_str(), nullptr, nullptr)) != 0) { // Open the file
@@ -47,12 +52,39 @@ void FileInput::open(const std::string& file_name) {
         throw std::runtime_error("Could copy codec context to codec parameters of input stream: " + std::string(error_message));  // Throw an exception if failed
     }
 
+    if (this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size) {
+        codec_ctx_->extradata = (uint8_t*)av_mallocz(this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size +
+                                            AV_INPUT_BUFFER_PADDING_SIZE);
+        if (!codec_ctx_->extradata) {
+            throw std::runtime_error("Error nesse lugar");
+        }
+        memcpy(codec_ctx_->extradata, this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata,
+                this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size);
+        codec_ctx_->extradata_size = this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size;
+    }
+
+    codec_ctx_->codec_id = AV_CODEC_ID_H264;
+
+    if ((error_code = av_hwdevice_ctx_create(&buffer_ref_, AV_HWDEVICE_TYPE_VAAPI, nullptr, nullptr, 0)) == 0) {
+        std::clog << ">>> Starting hwaccel context" << std::endl;
+        // this->codec_ctx_->hwaccel_context = av_hwdevice_hwconfig_alloc(buffer_ref_);
+        // this->codec_ctx_->hwaccel_flags = AV_HWACCEL_FLAG_ALLOW_HIGH_DEPTH;
+        
+        this->codec_ctx_->opaque = (void*)&buffer_ref_;
+        this->codec_ctx_->get_format = formatCallback;
+    } else {
+        av_strerror(error_code, error_message, 100);                                                       // Fetch the error code
+        throw std::runtime_error("HWACCEL: " + std::string(error_message));  // Throw an exception if failed
+    }
+
     this->codec_ctx_->strict_std_compliance = -2;
 
     if (avcodec_open2(this->codec_ctx_, this->codec_, nullptr) < 0) { // Open the codec
         throw std::runtime_error("Could not open codec"); // Throw an exception if failed
     }
 }
+
+
 
 AVPacket* FileInput::read() {
     int status_code = 0;

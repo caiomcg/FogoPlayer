@@ -5,6 +5,7 @@
 #include "RingQueue.h"
 
 #include "SoftwareDecoder.hpp"
+#include "HardwareDecoder.hpp"
 
 #include <iostream>
 
@@ -31,7 +32,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     sdl_wrapper.registerListener(this);
     sdl_wrapper.spawn().detach();
 
-    LibAVOutputMedia* output_media_ = new SoftwareDecoder();
+    LibAVOutputMedia* output_media_ = new HardwareDecoder();
 
     output_media_->setInputMedia(this->input_media_);
     output_media_->setInputQueue(raw_packet_queue);

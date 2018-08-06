@@ -52,10 +52,12 @@ void SDLWrapper::run() {
     }
 
     SwsContext* sws_context = sws_getContext(this->codec_ctx_->width, this->codec_ctx_->height,
-        this->codec_ctx_->pix_fmt, this->codec_ctx_->width, this->codec_ctx_->height,
+        AV_PIX_FMT_NV12, this->codec_ctx_->width, this->codec_ctx_->height,
         AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
-
+        
     while ((frame = decodec_frame_queue_->take()) != nullptr) {
+
+        
         sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize);
         
         SDL_UpdateTexture(this->texture_, NULL, RGB_frame->data[0], RGB_frame->linesize[0]);

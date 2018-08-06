@@ -9,7 +9,10 @@
 
 extern "C" {
     #include <libavformat/avformat.h>
+    #include <libavutil/hwcontext.h>
+    #include <libavcodec/vaapi.h>
     #include <libavcodec/avcodec.h>
+    #include <libavutil/hwcontext_vaapi.h>
 }
 
 class LibAVOutputMedia {
