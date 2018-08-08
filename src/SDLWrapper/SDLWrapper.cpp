@@ -8,7 +8,7 @@ SDLWrapper::SDLWrapper(LibAVInputMedia* input_media, std::shared_ptr<RingQueue<A
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1); // TODO: Decide the appropriate opengl options
 
-    if (!(this->window_ = SDL_CreateWindow("FogoPlayer", 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_FULLSCREEN |SDL_WINDOW_OPENGL))) {
+    if (!(this->window_ = SDL_CreateWindow("FogoPlayer", 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_RESIZABLE |SDL_WINDOW_OPENGL))) {
         SDL_Quit();
         throw std::runtime_error("Could not initialize SDL window");
     }
@@ -19,7 +19,7 @@ SDLWrapper::SDLWrapper(LibAVInputMedia* input_media, std::shared_ptr<RingQueue<A
         throw std::runtime_error("SDL_CreateRenderer Error: " + std::string(SDL_GetError()));
     }
 
-    if (!(this->texture_ = SDL_CreateTexture(this->renderer_, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, this->codec_ctx_->width, this->codec_ctx_->height))) {
+    if (!(this->texture_ = SDL_CreateTexture(this->renderer_, SDL_PIXELFORMAT_NV12, SDL_TEXTUREACCESS_STREAMING, this->codec_ctx_->width, this->codec_ctx_->height))) {
         SDL_DestroyWindow(this->window_);
         SDL_Quit();
         throw std::runtime_error("Could not initialize video texture" + std::string(SDL_GetError()));
@@ -33,6 +33,11 @@ void SDLWrapper::registerListener(SDLEventListener* listener) {
 void SDLWrapper::run() {
     AVFrame* frame = nullptr;
     AVFrame* RGB_frame = av_frame_alloc();
+
+    uint8_t* sdl_texture_buffer = nullptr;
+    unsigned y_plane_size  = this->codec_ctx_->width * this->codec_ctx_->height;
+    unsigned uv_plane_size = (this->codec_ctx_->width * this->codec_ctx_->height) / 2;
+    int pitch = 0;
 
     SDL_Event evt;
 
@@ -51,16 +56,20 @@ void SDLWrapper::run() {
         throw std::runtime_error("Could not fill the RGB frame array");
     }
 
-    SwsContext* sws_context = sws_getContext(this->codec_ctx_->width, this->codec_ctx_->height,
-        AV_PIX_FMT_NV12, this->codec_ctx_->width, this->codec_ctx_->height,
-        AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
+    //SwsContext* sws_context = sws_getContext(this->codec_ctx_->width, this->codec_ctx_->height,
+    //    AV_PIX_FMT_NV12, this->codec_ctx_->width, this->codec_ctx_->height,
+    //    AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
         
     while ((frame = decodec_frame_queue_->take()) != nullptr) {
+        //sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize)
+        //SDL_UpdateTexture(this->texture_, NULL, frame->data[0], frame->linesize[0]);
+        SDL_LockTexture(this->texture_, nullptr, (void **)&sdl_texture_buffer, &pitch);
+        
+        memcpy(sdl_texture_buffer, frame->data[0], y_plane_size);
+        memcpy(sdl_texture_buffer + y_plane_size, frame->data[1], uv_plane_size);
 
-        
-        sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize);
-        
-        SDL_UpdateTexture(this->texture_, NULL, RGB_frame->data[0], RGB_frame->linesize[0]);
+        SDL_UnlockTexture(this->texture_);
+
         SDL_RenderClear(this->renderer_);
         SDL_RenderCopy(this->renderer_, this->texture_, NULL, NULL);
         SDL_RenderPresent(this->renderer_);
@@ -69,7 +78,7 @@ void SDLWrapper::run() {
         
         SDL_PollEvent(&evt);
         if (evt.type == SDL_QUIT) {
-            std::cerr << "quitting" << std::endl;
+            std::cerr << "Exiting" << std::endl;
             SDL_DestroyWindow(this->window_);
             SDL_DestroyRenderer(this->renderer_);
             SDL_DestroyTexture(this->texture_);

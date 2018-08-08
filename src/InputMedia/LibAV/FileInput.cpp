@@ -20,7 +20,7 @@ void FileInput::open(const std::string& file_name) {
     std::clog << "Opening input: " << file_name << std::endl;
     if ((error_code = avformat_open_input (&this->format_ctx_, file_name.c_str(), nullptr, nullptr)) != 0) { // Open the file
         av_strerror(error_code, error_message, 100);
-        throw std::runtime_error("OpenPCM::Cold not open input stream " + file_name + " - " + error_message); // Throw an exception if failed
+        throw std::runtime_error("Cold not open input stream " + file_name + " - " + error_message); // Throw an exception if failed
     }
 
     std::clog << "Finding stream info" << std::endl;
@@ -28,16 +28,16 @@ void FileInput::open(const std::string& file_name) {
         throw std::runtime_error("Could not fetch stream info"); // Throw an exception if failed
     }
 
-    av_dump_format(this->format_ctx_, 0, "Teste", 0);
+    av_dump_format(this->format_ctx_, 0, file_name.c_str(), 0);
     
-    int pcm_stream_index = av_find_best_stream(this->format_ctx_, AVMEDIA_TYPE_VIDEO, -1, -1, &(this->codec_), 0); // Search for the best stream and store its index
+    int video_stream_index = av_find_best_stream(this->format_ctx_, AVMEDIA_TYPE_VIDEO, -1, -1, &(this->codec_), 0); // Search for the best stream and store its index
 
-    if (pcm_stream_index < 0) {
-        av_strerror(pcm_stream_index, error_message, 100);                    // Fetch the error code
+    if (video_stream_index < 0) {
+        av_strerror(video_stream_index, error_message, 100);                    // Fetch the error code
         throw std::runtime_error("Could best stream id not found: " + std::string(error_message));  // Throw an exception if failed
     }
     
-    this->stream_ = this->format_ctx_->streams[pcm_stream_index];  // Get the best stream
+    this->stream_ = this->format_ctx_->streams[video_stream_index];  // Get the best stream
 
     if(!(this->codec_ = avcodec_find_decoder(this->stream_->codecpar->codec_id))) {  // Find decoder codec
         throw std::runtime_error("Could find decoder codec.");
@@ -52,32 +52,16 @@ void FileInput::open(const std::string& file_name) {
         throw std::runtime_error("Could copy codec context to codec parameters of input stream: " + std::string(error_message));  // Throw an exception if failed
     }
 
-    if (this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size) {
-        codec_ctx_->extradata = (uint8_t*)av_mallocz(this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size +
-                                            AV_INPUT_BUFFER_PADDING_SIZE);
-        if (!codec_ctx_->extradata) {
-            throw std::runtime_error("Error nesse lugar");
-        }
-        memcpy(codec_ctx_->extradata, this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata,
-                this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size);
-        codec_ctx_->extradata_size = this->format_ctx_->streams[pcm_stream_index]->codecpar->extradata_size;
-    }
-
-    codec_ctx_->codec_id = AV_CODEC_ID_H264;
-
     if ((error_code = av_hwdevice_ctx_create(&buffer_ref_, AV_HWDEVICE_TYPE_VAAPI, nullptr, nullptr, 0)) == 0) {
         std::clog << ">>> Starting hwaccel context" << std::endl;
-        // this->codec_ctx_->hwaccel_context = av_hwdevice_hwconfig_alloc(buffer_ref_);
-        // this->codec_ctx_->hwaccel_flags = AV_HWACCEL_FLAG_ALLOW_HIGH_DEPTH;
-        
         this->codec_ctx_->opaque = (void*)&buffer_ref_;
         this->codec_ctx_->get_format = formatCallback;
     } else {
         av_strerror(error_code, error_message, 100);                                                       // Fetch the error code
-        throw std::runtime_error("HWACCEL: " + std::string(error_message));  // Throw an exception if failed
+        throw std::runtime_error("Failed to create hwdevice: " + std::string(error_message));  // Throw an exception if failed
     }
 
-    this->codec_ctx_->strict_std_compliance = -2;
+    this->codec_ctx_->strict_std_compliance = -2; // Allow experimental if necessary
 
     if (avcodec_open2(this->codec_ctx_, this->codec_, nullptr) < 0) { // Open the codec
         throw std::runtime_error("Could not open codec"); // Throw an exception if failed

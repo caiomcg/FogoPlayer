@@ -50,8 +50,7 @@ extern "C" {
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-static struct vaapi_context libva_ctx_;
-static AVBufferRef* buffer_ref_; // hwaccel
+static AVBufferRef* buffer_ref_; // hwaccel should be passed by opaque data
 
 typedef struct DecodeContext {
     AVBufferRef *hw_device_ref;
@@ -72,6 +71,8 @@ static AVPixelFormat formatCallback(AVCodecContext* av_codec_ctx, const AVPixelF
 
             frames_ctx   = (AVHWFramesContext*)av_codec_ctx->hw_frames_ctx->data;
             frames_hwctx = (AVVAAPIFramesContext*)frames_ctx->hwctx;
+            frames_hwctx->nb_surfaces = 20; // TODO: Search the correct amount of surfaces
+
             frames_ctx->format            = AV_PIX_FMT_VAAPI;
             frames_ctx->sw_format         = av_codec_ctx->sw_pix_fmt;
             frames_ctx->width             = FFALIGN(av_codec_ctx->coded_width,  32);
