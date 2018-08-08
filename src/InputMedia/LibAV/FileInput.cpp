@@ -52,9 +52,11 @@ void FileInput::open(const std::string& file_name) {
         throw std::runtime_error("Could copy codec context to codec parameters of input stream: " + std::string(error_message));  // Throw an exception if failed
     }
 
-    if ((error_code = av_hwdevice_ctx_create(&buffer_ref_, AV_HWDEVICE_TYPE_VAAPI, nullptr, nullptr, 0)) == 0) {
+    AVBufferRef* buffer_ref = nullptr;
+
+    if ((error_code = av_hwdevice_ctx_create(&buffer_ref, AV_HWDEVICE_TYPE_VAAPI, nullptr, nullptr, 0)) == 0) {
         std::clog << ">>> Starting hwaccel context" << std::endl;
-        this->codec_ctx_->opaque = (void*)&buffer_ref_;
+        this->codec_ctx_->opaque = (void*)buffer_ref;
         this->codec_ctx_->get_format = formatCallback;
     } else {
         av_strerror(error_code, error_message, 100);                                                       // Fetch the error code

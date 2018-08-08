@@ -50,12 +50,6 @@ extern "C" {
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-static AVBufferRef* buffer_ref_; // hwaccel should be passed by opaque data
-
-typedef struct DecodeContext {
-    AVBufferRef *hw_device_ref;
-} DecodeContext;
-
 static AVPixelFormat formatCallback(AVCodecContext* av_codec_ctx, const AVPixelFormat* fmt) {
     while (*fmt != AV_PIX_FMT_NONE) {
         if (*fmt == AV_PIX_FMT_VAAPI) {
@@ -65,7 +59,7 @@ static AVPixelFormat formatCallback(AVCodecContext* av_codec_ctx, const AVPixelF
             AVHWFramesContext  *frames_ctx;
             AVVAAPIFramesContext *frames_hwctx;
             /* create a pool of surfaces to be used by the decoder */
-            av_codec_ctx->hw_frames_ctx = av_hwframe_ctx_alloc(buffer_ref_); // Should grab from decodecontext
+            av_codec_ctx->hw_frames_ctx = av_hwframe_ctx_alloc(decode);
             if (!av_codec_ctx->hw_frames_ctx)
                 return AV_PIX_FMT_NONE;
 
