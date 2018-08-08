@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-Receiver::Receiver() : keep_alive_(true), input_media_(new FileInput()) {}
+Receiver::Receiver() : keep_alive_(true), should_pause_(false), input_media_(new FileInput()) {}
 
 void Receiver::setInputMedia(LibAVInputMedia* input_media) { // Not thread safe
     this->input_media_ = input_media;
@@ -19,16 +19,27 @@ void Receiver::onWindowClosed() {
     keep_alive_ = false;
 }
 
+void Receiver::onPausePressed(bool state) {
+    std::unique_lock<std::mutex> pause_lock(this->pause_mutex_);
+    if (state) {
+        this->should_pause_ = false;
+        this->paused_condition_.notify_one();
+    } else {
+        this->should_pause_ = true;
+    }
+}
+
 void Receiver::run(const std::string& socket_info) { //Producer Thread
     // FirstQueue -> From input media to output media for decoding
     // secondQueue -> From OutputMedia to presentation class
     AVPacket* packet = nullptr;
+
     auto raw_frame_queue  = std::make_shared<RingQueue<AVFrame*>>(60); // Maximum of 60 fps
     auto raw_packet_queue = std::make_shared<RingQueue<AVPacket*>>(60);
 
     this->input_media_->open(socket_info);
 
-    SDLWrapper sdl_wrapper{this->input_media_, raw_frame_queue};
+    SDLWrapper sdl_wrapper{socket_info, this->input_media_, raw_frame_queue};
     sdl_wrapper.registerListener(this);
     sdl_wrapper.spawn().detach();
 
@@ -39,11 +50,15 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     output_media_->setOutputQueue(raw_frame_queue);
     output_media_->spawn().detach(); // Spawn the first consumer - decoder
 
-
     while ((packet = this->input_media_->read()) != nullptr && keep_alive_) {
         if (packet->stream_index == 0) {
             raw_packet_queue->put(&packet);
             std::this_thread::sleep_for(std::chrono::milliseconds(41)); // limit to approximately 24fps
+
+            while (this->should_pause_) {
+                std::unique_lock<std::mutex> pause_lock(this->pause_mutex_);
+                this->paused_condition_.wait(pause_lock);
+            }
         }
     }
 }

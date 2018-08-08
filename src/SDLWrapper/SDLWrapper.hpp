@@ -19,6 +19,7 @@ extern "C" {
 class SDLEventListener {
 public:
     virtual void onWindowClosed() = 0;
+    virtual void onPausePressed(bool state) = 0;
 };
 
 class SDLWrapper {
@@ -28,13 +29,19 @@ private:
     SDL_Texture* texture_;
     SDLEventListener* event_listener;
 
+    bool is_playing_;
+    bool keep_alive_;
+
     AVCodecContext* codec_ctx_;
 
     SDLEventListener* l;
 
     std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue_;
+
+    void eventListener();
+    void destroy();
 public:
-    SDLWrapper(LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue);
+    SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue);
 
     void registerListener(SDLEventListener* listener);
 
