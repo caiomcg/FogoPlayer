@@ -58,7 +58,7 @@ OPENCV_LIB += `pkg-config --libs opencv`
 ALSA_LIB += -lasound 
 ZBAR_LIB += -lzbar
 
-LIB := -pthread -lm -lrt  $(FFMPEG_LIB) $(OPENCV_LIB) $(ALSA_LIB) $(ZBAR_LIB) $(SDL_LIB)
+LIB := -pthread -lm -lrt -lqrencode $(FFMPEG_LIB) $(OPENCV_LIB) $(ALSA_LIB) $(ZBAR_LIB) $(SDL_LIB)
 
 ifeq ($(debug), 1)
 CFLAGS += -g -ggdb3 -D DEBUG

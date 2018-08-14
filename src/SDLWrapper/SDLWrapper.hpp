@@ -5,6 +5,8 @@
 #include <chrono>
 #include <memory>
 
+#include <qrencode.h>
+
 #include <SDL2/SDL.h>
 
 #include "RingQueue.h"
@@ -27,7 +29,9 @@ private:
     SDL_Window* window_;
     SDL_Renderer* renderer_;
     SDL_Texture* texture_;
+    SDL_Texture* qr_texture_;
     SDLEventListener* event_listener;
+    QRcode* qr_code_;
 
     bool is_playing_;
     bool keep_alive_;
