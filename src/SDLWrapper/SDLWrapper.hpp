@@ -33,8 +33,12 @@ private:
     SDLEventListener* event_listener;
     QRcode* qr_code_;
 
+    SDL_Rect video_rect_;
+
     bool is_playing_;
     bool keep_alive_;
+
+    int border_offset_;
 
     AVCodecContext* codec_ctx_;
 
@@ -44,8 +48,9 @@ private:
 
     void eventListener();
     void destroy();
+    void updateVideoRect(SDL_Rect& rect);
 public:
-    SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue);
+    SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset = 0);
 
     void registerListener(SDLEventListener* listener);
 

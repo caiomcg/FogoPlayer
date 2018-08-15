@@ -3,7 +3,7 @@
 #include <qrencode.h>
 
 
-SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue) : event_listener(nullptr), is_playing_(true), keep_alive_(true), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
+SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), is_playing_(true), keep_alive_(true), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_ShowCursor(0);
     std::string window_name = file_name + " - FogoPlayer";
@@ -12,7 +12,7 @@ SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_medi
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1); // TODO: Decide the appropriate opengl options
 
-    if (!(this->window_ = SDL_CreateWindow(window_name.c_str(), 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_RESIZABLE |SDL_WINDOW_OPENGL))) {
+    if (!(this->window_ = SDL_CreateWindow(window_name.c_str(), 0, 0, this->codec_ctx_->width, this->codec_ctx_->height, SDL_WINDOW_FULLSCREEN_DESKTOP |SDL_WINDOW_OPENGL))) {
         SDL_Quit();
         throw std::runtime_error("Could not initialize SDL window");
     }
@@ -47,9 +47,14 @@ void SDLWrapper::run() {
     uint8_t* sdl_texture_buffer = nullptr;
     uint8_t* qr_texture_buffer  = nullptr;
 
+    int window_width = 0;
+    int window_height = 0;
+
     unsigned y_plane_size  = this->codec_ctx_->width * this->codec_ctx_->height;
     unsigned uv_plane_size = (this->codec_ctx_->width * this->codec_ctx_->height) / 2;
     int pitch = 0;
+
+    SDL_GetWindowSize(this->window_, &window_width, &window_height);
 
     int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_ctx_->width, this->codec_ctx_->height, 8);
     if (numBytes < 1) {
@@ -66,17 +71,11 @@ void SDLWrapper::run() {
         throw std::runtime_error("Could not fill the RGB frame array");
     }
 
-    //SwsContext* sws_context = sws_getContext(this->codec_ctx_->width, this->codec_ctx_->height,
-    //    AV_PIX_FMT_NV12, this->codec_ctx_->width, this->codec_ctx_->height,
-    //    AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
-
     std::thread(&SDLWrapper::eventListener, this).detach();
 
-    SDL_Rect r;
-    r.x = 0;
-    r.y = 0;
-    r.w = 300;
-    r.h = 300;
+    SDL_Rect r{0, 0, 300, 300};
+
+    this->updateVideoRect(video_rect_);
 
     uint8_t* temp_buffer = new uint8_t[300*300];
     for (int i = 0; i < 300*300; i++ ) {
@@ -123,7 +122,8 @@ void SDLWrapper::run() {
         SDL_UnlockTexture(this->qr_texture_);
 
         SDL_RenderClear(this->renderer_);
-        SDL_RenderCopy(this->renderer_, this->texture_, NULL, NULL);
+        SDL_RenderCopy(this->renderer_, this->texture_, NULL, &this->video_rect_);
+        //SDL_RenderCopyEx(this->renderer_, this->texture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_NONE);
         SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
         SDL_RenderPresent(this->renderer_);
 
@@ -162,6 +162,8 @@ void SDLWrapper::eventListener() {
                         if (is_fullscreen){
                             SDL_SetWindowPosition(window_, last_x, last_y);
                         }
+
+                        this->updateVideoRect(video_rect_);
                     }
                     break;
                 case SDLK_SPACE: {
@@ -184,15 +186,29 @@ void SDLWrapper::eventListener() {
 
 void SDLWrapper::destroy() {
     std::clog << "Destroying SDL wrapper" << std::endl;
+
     SDL_DestroyWindow(this->window_);
     SDL_DestroyRenderer(this->renderer_);
     SDL_DestroyTexture(this->texture_);
     SDL_Quit();
+    
     if (this->event_listener != nullptr) {
         std::thread([this]() { // Let the user handle screen exit
             this->event_listener->onWindowClosed();
         }).detach();
     }
+}
+
+void SDLWrapper::updateVideoRect(SDL_Rect& rect) {
+    int video_width  = 0;
+    int video_height = 0;
+
+    SDL_GetWindowSize(this->window_, &video_width, &video_height);
+
+    rect.x = (border_offset_ != 0 ? -(border_offset_ / 2) : 0);
+    rect.y =  0;
+    rect.w = video_width + border_offset_;
+    rect.h = video_height;
 }
 
 std::thread SDLWrapper::spawn() {

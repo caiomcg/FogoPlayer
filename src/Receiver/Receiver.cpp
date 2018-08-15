@@ -9,10 +9,14 @@
 
 #include <iostream>
 
-Receiver::Receiver() : keep_alive_(true), should_pause_(false), input_media_(new FileInput()) {}
+Receiver::Receiver() : keep_alive_(true), border_offset_(0), should_pause_(false), input_media_(new FileInput()) {}
 
 void Receiver::setInputMedia(LibAVInputMedia* input_media) { // Not thread safe
     this->input_media_ = input_media;
+}
+
+void Receiver::setBorderOffset(int border_offset) {
+    this->border_offset_ = border_offset;
 }
 
 void Receiver::onWindowClosed() {
@@ -39,7 +43,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
 
     this->input_media_->open(socket_info);
 
-    SDLWrapper sdl_wrapper{socket_info, this->input_media_, raw_frame_queue};
+    SDLWrapper sdl_wrapper{socket_info, this->input_media_, raw_frame_queue, this->border_offset_};
     sdl_wrapper.registerListener(this);
     sdl_wrapper.spawn().detach();
 
@@ -64,5 +68,5 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
 }
 
 std::thread Receiver::spawn(const std::string& file) {
-    return std::thread(&Receiver::run, this, file); 
+    return std::thread(&Receiver::run, this, file);
 }

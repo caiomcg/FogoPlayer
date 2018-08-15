@@ -21,6 +21,7 @@ class Receiver : public SDLEventListener {
 private:
     bool keep_alive_;
     int socket_fd_;
+    int border_offset_;
 
     bool should_pause_;
     std::mutex pause_mutex_;
@@ -31,6 +32,7 @@ public:
     Receiver();
 
     void setInputMedia(LibAVInputMedia* input_media);
+    void setBorderOffset(int border_offset);
     void onWindowClosed() override;
     void onPausePressed(bool state) override;
 

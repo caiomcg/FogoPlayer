@@ -41,6 +41,8 @@ void usage() {
     std::cout << "\033[1;37mDESCRIPTION\033[0m" << std::endl;
     std::cout << "        -i or --input" << std::endl;
     std::cout << "            Path to the input device or input file. Depends on the mode of operation, for more information refer to the README file." << std::endl;
+    std::cout << "        -b or --border_offset" << std::endl;
+    std::cout << "            Border offset in pixels." << std::endl;
     std::cout << "        -s or --stream" << std::endl;
     std::cout << "            Enables the streming mode" << std::endl;
     std::cout << "        -r or --receiver" << std::endl;
@@ -63,13 +65,14 @@ int main(int argc, char** argv) {
 
     struct option long_options[] = {
         {"input",     required_argument, 0,  'i' },
+        {"border_offset", optional_argument, 0, 'b'},
         {"stream",     no_argument, 0,  's' },
         {"receiver",     no_argument, 0,  'r' },
         {"cutter",     no_argument, 0,  'c' },
         {0,                           0, 0,   0  }
     };
 
-    auto args = ArgumentParser("i:src", long_options).parse(argc, &argv);
+    auto args = ArgumentParser("i:b:src", long_options).parse(argc, &argv);
     
     if (args.size() < 1) {
         usage();
@@ -92,6 +95,11 @@ int main(int argc, char** argv) {
     } else if ((argument = args.find('r')) != args.end()) {
         std::cout << "Initializing receiver mode " << std::endl;
         Receiver receiver{};
+
+        if ((argument = args.find('b')) != args.end()) {
+            receiver.setBorderOffset(atoi(argument->second.c_str()));
+        }
+
         receiver.spawn(input_file).join();
     } else if ((argument = args.find('c')) != args.end()) {
         std::cout << "Initializing video cutter ";
