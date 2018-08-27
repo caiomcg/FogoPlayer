@@ -32,6 +32,7 @@
 #include "InputMedia/OpenCV/CameraInput.hpp"
 #include "InputMedia/LibAV/FileInput.hpp"
 #include "Synchronizer/Synchronizer.hpp"
+#include "NetworkManager.hpp"
 
 void usage() {
     std::cout << "\033[1;37mNAME\033[0m" << std::endl;

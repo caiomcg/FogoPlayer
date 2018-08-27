@@ -11,6 +11,7 @@
 
 #include "RingQueue.h"
 #include "LibAVInputMedia.hpp"
+#include "NetworkManager.hpp"
 
 extern "C" {
     #include <libavutil/imgutils.h>
@@ -24,7 +25,7 @@ public:
     virtual void onPausePressed(bool state) = 0;
 };
 
-class SDLWrapper {
+class SDLWrapper : public NetworkObserver {
 private:
     SDL_Window* window_;
     SDL_Renderer* renderer_;
@@ -37,6 +38,7 @@ private:
 
     bool is_playing_;
     bool keep_alive_;
+    bool show_qr_;
 
     int border_offset_;
 
@@ -49,6 +51,10 @@ private:
     void eventListener();
     void destroy();
     void updateVideoRect(SDL_Rect& rect);
+
+
+    void showQR(bool state) override;
+    void shouldReproduce(bool state) override;
 public:
     SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset = 0);
 

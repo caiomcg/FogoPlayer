@@ -3,7 +3,7 @@
 #include <qrencode.h>
 
 
-SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), is_playing_(true), keep_alive_(true), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
+SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), is_playing_(true), keep_alive_(true), show_qr_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_ShowCursor(0);
     std::string window_name = file_name + " - FogoPlayer";
@@ -123,8 +123,11 @@ void SDLWrapper::run() {
 
         SDL_RenderClear(this->renderer_);
         SDL_RenderCopy(this->renderer_, this->texture_, NULL, &this->video_rect_);
-        //SDL_RenderCopyEx(this->renderer_, this->texture_, nullptr, nullptr, 0.0, nullptr, SDL_FLIP_NONE);
-        SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
+        
+        if (this->show_qr_) {
+            SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
+        }
+        
         SDL_RenderPresent(this->renderer_);
 
         av_frame_free(&frame);
@@ -209,6 +212,20 @@ void SDLWrapper::updateVideoRect(SDL_Rect& rect) {
     rect.y =  0;
     rect.w = video_width + border_offset_;
     rect.h = video_height;
+}
+
+void SDLWrapper::showQR(bool state) {
+    this->show_qr_ = state;
+}
+
+void SDLWrapper::shouldReproduce(bool state) {
+    this->is_playing_ = state;
+    
+    if (this->event_listener != nullptr) {
+        std::thread([this]() { // Let the user handle screen exit
+            this->event_listener->onPausePressed(this->is_playing_);
+        }).detach();
+    }
 }
 
 std::thread SDLWrapper::spawn() {
