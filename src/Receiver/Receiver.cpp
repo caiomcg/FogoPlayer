@@ -49,6 +49,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     network_manager.spawn().detach();
 
     sdl_wrapper.registerListener(this);
+    sdl_wrapper.setQ2d(av_q2d(this->input_media_->getBestStream()->time_base));
     sdl_wrapper.spawn().detach();
 
     LibAVOutputMedia* output_media_ = new HardwareDecoder();
@@ -62,7 +63,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     while ((packet = this->input_media_->read()) != nullptr && keep_alive_) {
         if (packet->stream_index == 0) {
             raw_packet_queue->put(&packet);
-
+            
             while (this->should_pause_) {
                 std::unique_lock<std::mutex> pause_lock(this->pause_mutex_);
                 this->paused_condition_.wait(pause_lock);

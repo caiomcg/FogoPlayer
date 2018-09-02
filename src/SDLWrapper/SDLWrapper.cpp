@@ -2,6 +2,8 @@
 #include <iostream>
 #include <qrencode.h>
 
+#define AV_SYNC_THRESHOLD 0.01
+#define AV_NOSYNC_THRESHOLD 10.0
 
 SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), is_playing_(true), keep_alive_(true), show_qr_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
     SDL_Init(SDL_INIT_VIDEO);
@@ -82,6 +84,14 @@ void SDLWrapper::run() {
         temp_buffer[i] = 0xFF;
     }
 
+    double pts = 0.0;
+    double last_pts = 0.0;
+
+    double video_clock = 0.0;
+    double last_delay = 40e-3;
+    double frame_timer = (double)av_gettime() / 1000000.0;
+    double actual_delay = 0.0;
+
     while ((frame = decodec_frame_queue_->take()) != nullptr && this->keep_alive_) {
         //sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize)
         //SDL_UpdateTexture(this->texture_, NULL, frame->data[0], frame->linesize[0]);
@@ -127,6 +137,41 @@ void SDLWrapper::run() {
         if (this->show_qr_) {
             SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
         }
+
+        pts = frame->pts * this->q2d_; // PTS in seconds
+
+        double frame_delay;
+
+        if(pts != 0) {
+            /* if we have pts, set video clock to it */
+            video_clock = pts;
+        } else {
+            /* if we aren't given a pts, set it to the clock */
+            pts = video_clock;
+        }
+        /* update the video clock */
+        frame_delay = this->q2d_;
+
+        /* if we are repeating a frame, adjust clock accordingly */
+        frame_delay += frame->repeat_pict * (frame_delay * 0.5);
+        video_clock += frame_delay;
+
+        double delay = pts - last_pts;
+        if(delay <= 0 || delay >= 1.0) {
+            delay = last_delay;
+        }
+        /* save for next time */
+        last_delay = delay;
+        last_pts = pts;
+
+        frame_timer += delay;
+        
+        actual_delay = frame_timer - (av_gettime() / 1000000.0);
+        if(actual_delay < 0.010) { // Use ffplay metric of a minimum of 10ms delay between frames
+            actual_delay = 0.010;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds((int)(actual_delay * 1000 + 0.5)));
         
         SDL_RenderPresent(this->renderer_);
 
@@ -216,6 +261,10 @@ void SDLWrapper::updateVideoRect(SDL_Rect& rect) {
 
 void SDLWrapper::showQR(bool state) {
     this->show_qr_ = state;
+}
+
+void SDLWrapper::setQ2d(double q2d) {
+    this->q2d_ = q2d;
 }
 
 void SDLWrapper::shouldReproduce(bool state) {

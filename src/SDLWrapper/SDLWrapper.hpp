@@ -17,6 +17,7 @@ extern "C" {
     #include <libavutil/imgutils.h>
     #include <libavcodec/avcodec.h>
     #include <libswscale/swscale.h>
+    #include <libavutil/time.h>
 }
 
 class SDLEventListener {
@@ -41,6 +42,7 @@ private:
     bool show_qr_;
 
     int border_offset_;
+    double q2d_;
 
     AVCodecContext* codec_ctx_;
 
@@ -59,6 +61,8 @@ public:
     SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset = 0);
 
     void registerListener(SDLEventListener* listener);
+
+    void setQ2d(double q2d);
 
     void run();
     std::thread spawn();
