@@ -62,7 +62,6 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     while ((packet = this->input_media_->read()) != nullptr && keep_alive_) {
         if (packet->stream_index == 0) {
             raw_packet_queue->put(&packet);
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
 
             while (this->should_pause_) {
                 std::unique_lock<std::mutex> pause_lock(this->pause_mutex_);

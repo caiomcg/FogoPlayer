@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <iostream>
 #include <condition_variable>
 
 extern "C" {
@@ -61,6 +62,10 @@ public:
     bool isEmpty() {
         return this->head_ == this->tail_;
     }
+
+    int currentSize() {
+        return this->queue_size_ - (this->tail_ - this->head_) + (-((int) (this->tail_ <= this->head_)) & this->queue_size_);
+    }
     
 };
 
@@ -69,6 +74,7 @@ template <>
 class RingQueue<AVFrame*> {
 private:
     std::mutex mutex_;
+    std::mutex take_mutex_;
     std::condition_variable cond_;
 
     std::string name_;
@@ -76,6 +82,9 @@ private:
     unsigned queue_size_;
     unsigned head_;
     unsigned tail_;
+
+    const unsigned CAPACITY_LIMIT_ = 10; 
+
     AVFrame** queue_;
 public:
     RingQueue(const unsigned& size) : queue_size_{size}, head_{0}, tail_{0} {
@@ -90,6 +99,10 @@ public:
 
     void put(AVFrame** data) {
         std::unique_lock<std::mutex> lock(this->mutex_);
+        
+        while (this->currentSize() > 50) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
 
         if (this->queue_[this->head_] != nullptr) {
             av_frame_free(&this->queue_[this->head_]);
@@ -107,7 +120,7 @@ public:
     }
     
     AVFrame* take() {
-        std::unique_lock<std::mutex> lock(this->mutex_);
+        std::unique_lock<std::mutex> lock(this->take_mutex_);
         
         while (this->isEmpty()) {
             this->cond_.wait(lock);
@@ -125,12 +138,17 @@ public:
         return this->head_ == this->tail_;
     }
     
+    int currentSize() {
+        return this->queue_size_ - ((this->tail_ - this->head_) + (-((int) (this->tail_ <= this->head_)) & this->queue_size_));
+    }
+
 };
 
 template<>
 class RingQueue <AVPacket*> {
 private:
     std::mutex mutex_;
+    std::mutex take_mutex_;
     std::condition_variable cond_;
 
     std::string name_;
@@ -156,7 +174,11 @@ public:
 
     void put(AVPacket** data) {
         std::unique_lock<std::mutex> lock(this->mutex_);
-        
+
+        while (this->currentSize() > 50) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+
         if (this->queue_[this->head_] != nullptr) {
             av_packet_unref(this->queue_[this->head_]);
         }
@@ -172,7 +194,7 @@ public:
     }
     
     AVPacket* take() {
-        std::unique_lock<std::mutex> lock(this->mutex_);
+        std::unique_lock<std::mutex> lock(this->take_mutex_);
         
         while (this->isEmpty()) {
             this->cond_.wait(lock);
@@ -190,4 +212,7 @@ public:
         return this->head_ == this->tail_;
     }
     
+    int currentSize() {
+        return this->queue_size_ - ((this->tail_ - this->head_) + (-((int) (this->tail_ <= this->head_)) & this->queue_size_));
+    }
 };
