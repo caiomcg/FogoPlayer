@@ -5,7 +5,7 @@
 #define AV_SYNC_THRESHOLD 0.01
 #define AV_NOSYNC_THRESHOLD 10.0
 
-SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), is_playing_(true), keep_alive_(true), show_qr_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
+SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), clock_(8080), is_playing_(true), keep_alive_(true), show_qr_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_ShowCursor(0);
     std::string window_name = file_name + " - FogoPlayer";
@@ -36,6 +36,8 @@ SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_medi
         SDL_Quit();
         throw std::runtime_error("Could not initialize video texture" + std::string(SDL_GetError()));
     }
+
+    this->clock_.setObserver(this);
 }
 
 void SDLWrapper::registerListener(SDLEventListener* listener) {
@@ -43,11 +45,14 @@ void SDLWrapper::registerListener(SDLEventListener* listener) {
 }
 
 void SDLWrapper::run() {
+    this->clock_.start();
+
     AVFrame* frame = nullptr;
-    AVFrame* RGB_frame = av_frame_alloc();
 
     uint8_t* sdl_texture_buffer = nullptr;
     uint8_t* qr_texture_buffer  = nullptr;
+
+    int control = 0;
 
     int window_width = 0;
     int window_height = 0;
@@ -57,21 +62,6 @@ void SDLWrapper::run() {
     int pitch = 0;
 
     SDL_GetWindowSize(this->window_, &window_width, &window_height);
-
-    int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_ctx_->width, this->codec_ctx_->height, 8);
-    if (numBytes < 1) {
-        throw std::runtime_error("Could not get image size in bytes");
-    }
-
-    uint8_t* frame_buffer = (uint8_t*)av_malloc(numBytes);
-    if (!frame_buffer) {
-        throw std::runtime_error("Could not allocate image buffer");
-    }
-
-    int av_status = av_image_fill_arrays(&RGB_frame->data[0], &RGB_frame->linesize[0], frame_buffer, AV_PIX_FMT_RGB24, this->codec_ctx_->width, this->codec_ctx_->height, 1);
-    if (av_status < 0) {
-        throw std::runtime_error("Could not fill the RGB frame array");
-    }
 
     std::thread(&SDLWrapper::eventListener, this).detach();
 
@@ -84,17 +74,18 @@ void SDLWrapper::run() {
         temp_buffer[i] = 0xFF;
     }
 
-    double pts = 0.0;
-    double last_pts = 0.0;
-
-    double video_clock = 0.0;
-    double last_delay = 40e-3;
-    double frame_timer = (double)av_gettime() / 1000000.0;
-    double actual_delay = 0.0;
-
     while ((frame = decodec_frame_queue_->take()) != nullptr && this->keep_alive_) {
-        //sws_scale(sws_context, frame->data, frame->linesize, 0, this->codec_ctx_->height, RGB_frame->data, RGB_frame->linesize)
-        //SDL_UpdateTexture(this->texture_, NULL, frame->data[0], frame->linesize[0]);
+        if ((control = this->clock_.presentationCotrol()) != 0) {
+            if (control > 0 ) { // Positive integer = drop x frames
+                av_frame_free(&frame);
+                continue;
+            }
+            while (control < 0) { // Negative integer = hold current frame for the time of x frames
+                std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
+                control = this->clock_.presentationCotrol();
+            }
+        }
+
         SDL_LockTexture(this->texture_, nullptr, (void **)&sdl_texture_buffer, &pitch);
         
         memcpy(sdl_texture_buffer, frame->data[0], y_plane_size);
@@ -138,53 +129,15 @@ void SDLWrapper::run() {
             SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
         }
 
-        pts = frame->pts * this->q2d_; // PTS in seconds
-
-        double frame_delay;
-
-        if(pts != 0) {
-            /* if we have pts, set video clock to it */
-            video_clock = pts;
-        } else {
-            /* if we aren't given a pts, set it to the clock */
-            pts = video_clock;
-        }
-        /* update the video clock */
-        frame_delay = this->q2d_;
-
-        /* if we are repeating a frame, adjust clock accordingly */
-        frame_delay += frame->repeat_pict * (frame_delay * 0.5);
-        video_clock += frame_delay;
-
-        double delay = pts - last_pts;
-        if(delay <= 0 || delay >= 1.0) {
-            delay = last_delay;
-        }
-        /* save for next time */
-        last_delay = delay;
-        last_pts = pts;
-
-        frame_timer += delay;
-        
-        actual_delay = frame_timer - (av_gettime() / 1000000.0);
-        if(actual_delay < 0.010) { // Use ffplay metric of a minimum of 10ms delay between frames
-            actual_delay = 0.010;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds((int)(actual_delay * 1000 + 0.5)));
-        
+        std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
         SDL_RenderPresent(this->renderer_);
-
         av_frame_free(&frame);
-        //std::this_thread::sleep_for(std::chrono::milliseconds(41));
     }
-
-    av_free(frame_buffer);
-    av_frame_free(&RGB_frame);
 
     delete[] temp_buffer;
 
     this->destroy();
+    this->clock_.stop();
 }
 
 void SDLWrapper::eventListener() {
@@ -265,16 +218,6 @@ void SDLWrapper::showQR(bool state) {
 
 void SDLWrapper::setQ2d(double q2d) {
     this->q2d_ = q2d;
-}
-
-void SDLWrapper::shouldReproduce(bool state) {
-    this->is_playing_ = state;
-    
-    if (this->event_listener != nullptr) {
-        std::thread([this]() { // Let the user handle screen exit
-            this->event_listener->onPausePressed(this->is_playing_);
-        }).detach();
-    }
 }
 
 std::thread SDLWrapper::spawn() {

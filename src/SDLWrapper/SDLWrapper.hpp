@@ -10,8 +10,8 @@
 #include <SDL2/SDL.h>
 
 #include "RingQueue.h"
+#include "Clock.h"
 #include "LibAVInputMedia.hpp"
-#include "NetworkManager.hpp"
 
 extern "C" {
     #include <libavutil/imgutils.h>
@@ -26,7 +26,7 @@ public:
     virtual void onPausePressed(bool state) = 0;
 };
 
-class SDLWrapper : public NetworkObserver {
+class SDLWrapper : public ClockObserver {
 private:
     SDL_Window* window_;
     SDL_Renderer* renderer_;
@@ -34,6 +34,7 @@ private:
     SDL_Texture* qr_texture_;
     SDLEventListener* event_listener;
     QRcode* qr_code_;
+    Clock clock_;
 
     SDL_Rect video_rect_;
 
@@ -54,9 +55,7 @@ private:
     void destroy();
     void updateVideoRect(SDL_Rect& rect);
 
-
     void showQR(bool state) override;
-    void shouldReproduce(bool state) override;
 public:
     SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset = 0);
 

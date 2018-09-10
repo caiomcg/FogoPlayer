@@ -43,10 +43,6 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     this->input_media_->open(socket_info);
 
     SDLWrapper sdl_wrapper{socket_info, this->input_media_, raw_frame_queue, this->border_offset_};
-    
-    NetworkManager network_manager{8080};
-    network_manager.setObserver(&sdl_wrapper);
-    network_manager.spawn().detach();
 
     sdl_wrapper.registerListener(this);
     sdl_wrapper.setQ2d(av_q2d(this->input_media_->getBestStream()->time_base));
