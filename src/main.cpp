@@ -32,6 +32,7 @@
 #include "InputMedia/OpenCV/CameraInput.hpp"
 #include "InputMedia/LibAV/FileInput.hpp"
 #include "Synchronizer/Synchronizer.hpp"
+#include "InputMedia/OpenCV/PointGreyInput.hpp"
 
 void usage() {
     std::cout << "\033[1;37mNAME\033[0m" << std::endl;
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
         std::cout << "Initializing video cutter ";
     } else {
         Synchronizer synchronizer{};
-        synchronizer.setInputMedia(std::unique_ptr<OpencvInputMedia>(new CameraInput()))
+        synchronizer.setInputMedia(std::unique_ptr<OpencvInputMedia>(new PointGreyInput()))
             .spawn(input_file).join();
     }
 

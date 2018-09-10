@@ -51,7 +51,7 @@ POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgt
 PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(ZBAR_PACKAGES) $(SDL_PACKAGES) $(QR_ENCODE_PACKAGES) $(POINT_GREY_PACKAGES)
 # Shared Compiler Flags
 CFLAGS := -std=c++14 -O3 -Wall -Wextra
-INC := -I include $(INCLIST) -I /usr/local/include
+INC := -I include $(INCLIST) -I /usr/local/include -I/usr/include/flycapture
 
 SDL_LIB    += `pkg-config --libs sdl2` `pkg-config --libs SDL2_mixer`
 FFMPEG_LIB += `pkg-config --libs libavformat` `pkg-config --libs libavdevice` `pkg-config --libs libavcodec` `pkg-config --libs libavutil` `pkg-config --libs libswscale` `pkg-config --libs libswresample` 
@@ -59,7 +59,7 @@ OPENCV_LIB += `pkg-config --libs opencv`
 ALSA_LIB += -lasound 
 ZBAR_LIB += -lzbar
 
-LIB := -pthread -lm -lrt -lqrencode $(FFMPEG_LIB) $(OPENCV_LIB) $(ALSA_LIB) $(ZBAR_LIB) $(SDL_LIB)
+LIB := -pthread -lm -lrt -lqrencode $(FFMPEG_LIB) $(OPENCV_LIB) $(ALSA_LIB) $(ZBAR_LIB) $(SDL_LIB) -lflycapture
 
 ifeq ($(debug), 1)
 CFLAGS += -g -ggdb3 -D DEBUG

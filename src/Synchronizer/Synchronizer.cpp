@@ -25,6 +25,8 @@ void Synchronizer::run(const std::string& file) {
             std::cout << qr_info.data << " ";
         }
         std::cout << std::endl;
+
+        std::clog << frame.rows << "x" << frame.cols << std::endl;
         
         
         #ifdef DEBUG
@@ -32,6 +34,8 @@ void Synchronizer::run(const std::string& file) {
         if(cv::waitKey(1) == 27)
             break;
         #endif
+
+        delete frame.data;
     }
 }
 
