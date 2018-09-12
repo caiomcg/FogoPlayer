@@ -37,8 +37,8 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
     // secondQueue -> From OutputMedia to presentation class
     AVPacket* packet = nullptr;
 
-    auto raw_frame_queue  = std::make_shared<RingQueue<AVFrame*>>(60); // Maximum of 60 fps
-    auto raw_packet_queue = std::make_shared<RingQueue<AVPacket*>>(60);
+    auto raw_frame_queue  = std::make_shared<RingQueue<AVFrame*>>(120); // Maximum of 120 fps
+    auto raw_packet_queue = std::make_shared<RingQueue<AVPacket*>>(120);
 
     this->input_media_->open(socket_info);
 

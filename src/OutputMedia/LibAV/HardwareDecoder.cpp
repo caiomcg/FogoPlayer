@@ -29,7 +29,7 @@ AVFrame* HardwareDecoder::decode() {
                 } else {
                     // Handle non accelerated pixel format
                 }
-                std::clog << "PTS: " << frame->pts << " frame number: " << this->codec_ctx_->frame_number << " cpn: " << frame->coded_picture_number << " dpn: " << frame->display_picture_number << std::endl;
+                //std::clog << "PTS: " << frame->pts << " frame number: " << this->codec_ctx_->frame_number << " cpn: " << frame->coded_picture_number << " dpn: " << frame->display_picture_number << std::endl;
                 
                 if ((av_status = av_hwframe_transfer_data(GPU_frame, frame, 0)) < 0) {
                     fprintf(stderr, "Error transferring the data to system memory\n");
