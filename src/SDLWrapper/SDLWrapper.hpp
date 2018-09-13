@@ -45,6 +45,8 @@ private:
     int border_offset_;
     double q2d_;
 
+    std::string quadrant_;
+
     AVCodecContext* codec_ctx_;
 
     SDLEventListener* l;
@@ -62,6 +64,7 @@ public:
     void registerListener(SDLEventListener* listener);
 
     void setQ2d(double q2d);
+    void setQuadrant(const std::string& quadrant);
 
     void run();
     std::thread spawn();

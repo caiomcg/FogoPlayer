@@ -27,9 +27,11 @@ private:
     std::mutex pause_mutex_;
     std::condition_variable paused_condition_;
 
+    std::string quadrant_;
+
     LibAVInputMedia* input_media_;
 public:
-    Receiver();
+    Receiver(const std::string& quadrant);
 
     void setInputMedia(LibAVInputMedia* input_media);
     void setBorderOffset(int border_offset);

@@ -76,7 +76,7 @@ void SDLWrapper::run() {
 
     while ((frame = decodec_frame_queue_->take()) != nullptr && this->keep_alive_) {
         if ((control = this->clock_.presentationCotrol()) != 0) {
-            if (control > 0 ) { // Positive integer = drop x frames
+            if (control > 0) { // Positive integer = drop x frames
                 av_frame_free(&frame);
                 continue;
             }
@@ -94,7 +94,8 @@ void SDLWrapper::run() {
         SDL_UnlockTexture(this->texture_);
 
         SDL_LockTexture(this->qr_texture_, nullptr, (void **)&qr_texture_buffer, &pitch);
-        std::string info =  "q=0?pts=" + std::to_string(frame->pts);
+        std::string info =  "q=" + this->quadrant_ + ":pts=" + std::to_string(frame->pts);
+        std::clog << info << std::endl;
 
         if ((this->qr_code_ = QRcode_encodeString(info.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 0)) != nullptr) {
             int qrwith = this->qr_code_->width * 14;
@@ -218,6 +219,10 @@ void SDLWrapper::showQR(bool state) {
 
 void SDLWrapper::setQ2d(double q2d) {
     this->q2d_ = q2d;
+}
+
+void SDLWrapper::setQuadrant(const std::string& quadrant) {
+    this->quadrant_ = quadrant;
 }
 
 std::thread SDLWrapper::spawn() {

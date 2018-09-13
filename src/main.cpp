@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <memory>
+#include <string>
 
 #include "Receiver.hpp"
 #include "Utils/ArgumentParser.hpp"
@@ -94,7 +95,7 @@ int main(int argc, char** argv) {
         std::cout << "Initializing streaming mode ";
     } else if ((argument = args.find('r')) != args.end()) {
         std::cout << "Initializing receiver mode " << std::endl;
-        Receiver receiver{};
+        Receiver receiver{argv[0]};
 
         if ((argument = args.find('b')) != args.end()) {
             receiver.setBorderOffset(atoi(argument->second.c_str()));
@@ -105,6 +106,12 @@ int main(int argc, char** argv) {
         std::cout << "Initializing video cutter ";
     } else {
         Synchronizer synchronizer{};
+
+        for (int i = 0; i < argc; i++) {
+            std::clog << "Registering client for quadrant " << i << " with ip: " << argv[i] << std::endl;
+            synchronizer.registerClients(std::pair<std::string, std::string>(std::to_string(i), std::string(argv[i])));
+        }
+
         synchronizer.setInputMedia(std::unique_ptr<OpencvInputMedia>(new CameraInput()))
             .spawn(input_file).join();
     }

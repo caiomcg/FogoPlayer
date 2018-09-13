@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-Receiver::Receiver() : keep_alive_(true), border_offset_(0), should_pause_(false), input_media_(new FileInput()) {}
+Receiver::Receiver(const std::string& quadrant) : keep_alive_(true), border_offset_(0), should_pause_(false), quadrant_(quadrant), input_media_(new FileInput()){}
 
 void Receiver::setInputMedia(LibAVInputMedia* input_media) { // Not thread safe
     this->input_media_ = input_media;
@@ -46,6 +46,7 @@ void Receiver::run(const std::string& socket_info) { //Producer Thread
 
     sdl_wrapper.registerListener(this);
     sdl_wrapper.setQ2d(av_q2d(this->input_media_->getBestStream()->time_base));
+    sdl_wrapper.setQuadrant(this->quadrant_);
     sdl_wrapper.spawn().detach();
 
     LibAVOutputMedia* output_media_ = new HardwareDecoder();
