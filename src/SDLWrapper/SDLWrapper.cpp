@@ -59,7 +59,7 @@ void SDLWrapper::run() {
     SDL_Color drop_color = { 255, 0, 0 };
     SDL_Rect text_rect = {1920 - 500, 1080 - 200, 500, 200};
 
-    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/ubuntu-font-family/UbuntuMono-R.ttf", 60);
+    TTF_Font* font = TTF_OpenFont("./IBMPlexMono-Regular.ttf", 60);
     if (font == nullptr) {
         throw std::runtime_error("Could not open font");
     }
@@ -93,13 +93,13 @@ void SDLWrapper::run() {
 
         if ((control = this->clock_.presentationCotrol()) != 0) {
             if (control > 0) { // Positive integer = drop x frames
-                renderAndShow(TTF_RenderText_Solid(font, info.c_str(), textColor), drop_color, text_rect);
+                renderAndShow(TTF_RenderText_Solid(font, info.c_str(), drop_color), text_rect);
                 av_frame_free(&frame);
                 continue;
             }
 
             while (control < 0) { // Negative integer = hold current frame for the time of x frames
-            renderAndShow(TTF_RenderText_Solid(font, info.c_str(), textColor), hold_color, text_rect);
+            renderAndShow(TTF_RenderText_Solid(font, info.c_str(), hold_color), text_rect);
                 std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
                 control = this->clock_.presentationCotrol();
             }            
@@ -169,7 +169,7 @@ void SDLWrapper::run() {
     this->clock_.stop();
 }
 
-void SDLWrapper::renderAndShow(SDL_Surface* surface, const SDL_Color& color, SDL_Rect& rect) {
+void SDLWrapper::renderAndShow(SDL_Surface* surface, SDL_Rect& rect) {
     if (surface == nullptr) return;
 
     SDL_RenderClear(this->renderer_);    
