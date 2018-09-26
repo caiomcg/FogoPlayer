@@ -43,7 +43,7 @@ OPENCV_PATH=$(HOME)/opencv
 
 OPENCV_PACKAGES += cmake git libgtk2.0-dev pkg-config libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev libv4l-dev
 FFMPEG_PACKAGES += libvpx-dev libopus-dev libx264-dev libx265-dev libasound2-dev libvdpau-dev libva-dev yasm
-SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev
+SDL_PACKAGES += libsdl2-dev libsdl2-mixer-dev libsdl2-ttf-dev
 ZBAR_PACKAGES += libzbar0 libzbar-dev
 QR_ENCODE_PACKAGES += libqrencode-dev
 POINT_GREY_PACKAGES += #libraw1394-11  libgtkmm-2.4-dev libglademm-2.4-dev libgtkglextmm-x11-1.2-dev libusb-1.0-0 #libavcodec-ffmpeg56 libavformat-ffmpeg56 libswscale-ffmpeg3 libswresample-ffmpeg1 libavutil-ffmpeg54
@@ -53,7 +53,7 @@ PACKAGES += $(OPENCV_PACKAGES) $(FFMPEG_PACKAGES) $(ZBAR_PACKAGES) $(SDL_PACKAGE
 CFLAGS := -std=c++14 -O3 -Wall -Wextra
 INC := -I include $(INCLIST) -I /usr/local/include
 
-SDL_LIB    += `pkg-config --libs sdl2` `pkg-config --libs SDL2_mixer`
+SDL_LIB    += `pkg-config --libs sdl2` `pkg-config --libs SDL2_mixer` `pkg-config --libs SDL2_ttf`
 FFMPEG_LIB += `pkg-config --libs libavformat` `pkg-config --libs libavdevice` `pkg-config --libs libavcodec` `pkg-config --libs libavutil` `pkg-config --libs libswscale` `pkg-config --libs libswresample` 
 OPENCV_LIB += `pkg-config --libs opencv`
 ALSA_LIB += -lasound 

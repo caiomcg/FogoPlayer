@@ -58,6 +58,8 @@ private:
     void updateVideoRect(SDL_Rect& rect);
 
     void showQR(bool state) override;
+
+    void renderAndShow(SDL_Surface* surface, const SDL_Color& color, SDL_Rect& rect);
 public:
     SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset = 0);
 

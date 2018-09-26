@@ -1,6 +1,7 @@
 #include "SDLWrapper.hpp"
 #include <iostream>
 #include <qrencode.h>
+#include <SDL2/SDL_ttf.h>
 
 #define AV_SYNC_THRESHOLD 0.01
 #define AV_NOSYNC_THRESHOLD 10.0
@@ -52,6 +53,17 @@ void SDLWrapper::run() {
     uint8_t* sdl_texture_buffer = nullptr;
     uint8_t* qr_texture_buffer  = nullptr;
 
+    TTF_Init();
+    SDL_Color textColor = { 255, 255, 255 };
+    SDL_Color hold_color = { 0, 255, 0 };
+    SDL_Color drop_color = { 255, 0, 0 };
+    SDL_Rect text_rect = {1920 - 500, 1080 - 200, 500, 200};
+
+    TTF_Font* font = TTF_OpenFont("/usr/share/fonts/truetype/ubuntu-font-family/UbuntuMono-R.ttf", 60);
+    if (font == nullptr) {
+        throw std::runtime_error("Could not open font");
+    }
+
     int control = 0;
 
     int window_width = 0;
@@ -75,15 +87,22 @@ void SDLWrapper::run() {
     }
 
     while ((frame = decodec_frame_queue_->take()) != nullptr && this->keep_alive_) {
+        int* frame_num = (int*)frame->opaque;
+        std::string info = "q=" + this->quadrant_ + ":pts=" + std::to_string(*frame_num);
+        delete frame_num;
+
         if ((control = this->clock_.presentationCotrol()) != 0) {
             if (control > 0) { // Positive integer = drop x frames
+                renderAndShow(TTF_RenderText_Solid(font, info.c_str(), textColor), drop_color, text_rect);
                 av_frame_free(&frame);
                 continue;
             }
+
             while (control < 0) { // Negative integer = hold current frame for the time of x frames
+            renderAndShow(TTF_RenderText_Solid(font, info.c_str(), textColor), hold_color, text_rect);
                 std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
                 control = this->clock_.presentationCotrol();
-            }
+            }            
         }
 
         SDL_LockTexture(this->texture_, nullptr, (void **)&sdl_texture_buffer, &pitch);
@@ -94,12 +113,6 @@ void SDLWrapper::run() {
         SDL_UnlockTexture(this->texture_);
 
         SDL_LockTexture(this->qr_texture_, nullptr, (void **)&qr_texture_buffer, &pitch);
-        
-        int* frame_num = (int*)frame->opaque;
-        std::string info =  "q=" + this->quadrant_ + ":pts=" + std::to_string(*frame_num);
-        delete frame_num;
-
-        std::clog << info << std::endl;
 
         if ((this->qr_code_ = QRcode_encodeString(info.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 0)) != nullptr) {
             int qrwith = this->qr_code_->width * 14;
@@ -129,6 +142,14 @@ void SDLWrapper::run() {
 
         SDL_RenderClear(this->renderer_);
         SDL_RenderCopy(this->renderer_, this->texture_, NULL, &this->video_rect_);
+
+        auto text_surface = TTF_RenderText_Solid(font, info.c_str(), textColor);
+        if (text_surface != nullptr) {
+            SDL_Texture* message = SDL_CreateTextureFromSurface(this->renderer_, text_surface);
+            SDL_RenderCopy(this->renderer_, message, nullptr, &text_rect);
+            SDL_DestroyTexture(message);
+            SDL_FreeSurface(text_surface);
+        }
         
         if (this->show_qr_) {
             SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
@@ -141,8 +162,23 @@ void SDLWrapper::run() {
 
     delete[] temp_buffer;
 
+    TTF_CloseFont(font);
+    TTF_Quit();
+
     this->destroy();
     this->clock_.stop();
+}
+
+void SDLWrapper::renderAndShow(SDL_Surface* surface, const SDL_Color& color, SDL_Rect& rect) {
+    if (surface == nullptr) return;
+
+    SDL_RenderClear(this->renderer_);    
+    SDL_Texture* message = SDL_CreateTextureFromSurface(this->renderer_, surface);
+    SDL_RenderCopy(this->renderer_, message, nullptr, &rect);
+    SDL_DestroyTexture(message);
+    SDL_FreeSurface(surface);
+
+    SDL_RenderPresent(this->renderer_);
 }
 
 void SDLWrapper::eventListener() {
