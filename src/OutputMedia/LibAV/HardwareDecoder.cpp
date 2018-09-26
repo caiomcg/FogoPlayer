@@ -41,6 +41,9 @@ AVFrame* HardwareDecoder::decode() {
                 }
                 av_packet_unref(packet);
                 av_frame_free(&frame);
+
+                int* frame = new int(this->codec_ctx_->frame_number);
+                GPU_frame->opaque = frame;
                 return GPU_frame;
             } else {
                 if (av_status == AVERROR(EAGAIN)) {

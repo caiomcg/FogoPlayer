@@ -65,7 +65,7 @@ void SDLWrapper::run() {
 
     std::thread(&SDLWrapper::eventListener, this).detach();
 
-    SDL_Rect r{0, 0, 300, 300};
+    SDL_Rect r{0, 0, 1000, 1000};
 
     this->updateVideoRect(video_rect_);
 
@@ -94,14 +94,18 @@ void SDLWrapper::run() {
         SDL_UnlockTexture(this->texture_);
 
         SDL_LockTexture(this->qr_texture_, nullptr, (void **)&qr_texture_buffer, &pitch);
-        std::string info =  "q=" + this->quadrant_ + ":pts=" + std::to_string(frame->pts);
+        
+        int* frame_num = (int*)frame->opaque;
+        std::string info =  "q=" + this->quadrant_ + ":pts=" + std::to_string(*frame_num);
+        delete frame_num;
+
         std::clog << info << std::endl;
 
         if ((this->qr_code_ = QRcode_encodeString(info.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 0)) != nullptr) {
             int qrwith = this->qr_code_->width * 14;
 
-            for (int i = 0; i < qrwith; i++) {
-                for (int j = 0; j < qrwith; j++) {
+            for (int i = 2; i < qrwith; i++) {
+                for (int j = 2; j < qrwith; j++) {
                     if (this->qr_code_->data[i/14 * this->qr_code_->width + j/14] & 0x01) {
                         temp_buffer[300 * i + j] = 0x00;
                     } else {

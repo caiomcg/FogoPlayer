@@ -12,7 +12,7 @@
 #include <regex>
 
 
-#define THRESHOLD 4
+#define THRESHOLD 0
 
 Synchronizer::Synchronizer() : qr_code_finder_() {}
 
@@ -69,18 +69,17 @@ void Synchronizer::run(const std::string& file) {
             }
         }
         
-        #ifdef DEBUG
+
         for (auto qr_info : qr_data) {
-            
             auto x1 = std::min(qr_info.location.at(0).x, std::min(qr_info.location.at(1).x, std::min(qr_info.location.at(2).x, qr_info.location.at(3).x))); // top-left pt. is the leftmost of the 4 points
             auto x2 = std::max(qr_info.location.at(0).x, std::max(qr_info.location.at(1).x, std::max(qr_info.location.at(2).x, qr_info.location.at(3).x))); // bottom-right pt. is the rightmost of the 4 points
             auto y1 = std::min(qr_info.location.at(0).y, std::min(qr_info.location.at(1).y, std::min(qr_info.location.at(2).y, qr_info.location.at(3).y))); //top-left pt. is the uppermost of the 4 points
             auto y2 = std::max(qr_info.location.at(0).y, std::max(qr_info.location.at(1).y, std::max(qr_info.location.at(2).y, qr_info.location.at(3).y))); //bottom-right pt. is the lowermost of the 4 points
             cv::rectangle(frame, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(0, 255, 0));
-            std::cout << qr_info.data << " ";
+            std::cout << qr_info.data << " " <<std::endl;
         }
-        std::cout << std::endl;
         
+        #ifndef DEBUG        
         cv::imshow("frame", frame);
         if(cv::waitKey(1) == 27)
             break;
@@ -120,6 +119,16 @@ int Synchronizer::createSocket(const std::string& ip) {
     if (connect(fd, (struct sockaddr*)& sock_info, sockaddr_size_) == -1) {
         throw std::runtime_error("Could not connect");
     }
+
+    char buffer[5];
+
+    buffer[0] = 0x01;
+
+    if (send(fd, buffer, 5, 0) < 0) {
+        perror("Send failed");
+    }
+
+    this->sendData("0", 0x01, this->dropCount(0, 0));
 
     return fd;
 }
