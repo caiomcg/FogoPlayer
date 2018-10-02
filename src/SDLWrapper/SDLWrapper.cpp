@@ -54,9 +54,9 @@ void SDLWrapper::run() {
     uint8_t* qr_texture_buffer  = nullptr;
 
     TTF_Init();
-    SDL_Color textColor = { 255, 255, 255 };
-    SDL_Color hold_color = { 0, 255, 0 };
-    SDL_Color drop_color = { 255, 0, 0 };
+    SDL_Color textColor = { 255, 255, 255, 255 };
+    SDL_Color hold_color = { 0, 255, 0, 255 };
+    SDL_Color drop_color = { 255, 0, 0, 255 };
     SDL_Rect text_rect = {1920 - 500, 1080 - 200, 500, 200};
 
     TTF_Font* font = TTF_OpenFont("./IBMPlexMono-Regular.ttf", 60);
@@ -99,10 +99,10 @@ void SDLWrapper::run() {
             }
 
             while (control < 0) { // Negative integer = hold current frame for the time of x frames
-            renderAndShow(TTF_RenderText_Solid(font, info.c_str(), hold_color), text_rect);
+                renderAndShow(TTF_RenderText_Solid(font, info.c_str(), hold_color), text_rect);
                 std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
                 control = this->clock_.presentationCotrol();
-            }            
+            }
         }
 
         SDL_LockTexture(this->texture_, nullptr, (void **)&sdl_texture_buffer, &pitch);

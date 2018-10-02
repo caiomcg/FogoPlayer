@@ -52,7 +52,7 @@ int Clock::presentationCotrol() {
     return 0;
 }
 
-int Clock::ptsToRealClock(AVFrame* frame, const int& q2d) {
+int Clock::ptsToRealClock(AVFrame* frame, const double& q2d) {
     pts = frame->pts * q2d; // PTS in seconds
 
     double frame_delay;
@@ -74,7 +74,7 @@ int Clock::ptsToRealClock(AVFrame* frame, const int& q2d) {
     double delay = pts - last_pts;
     if(delay <= 0 || delay >= 1.0) {
         delay = last_delay;
-    }
+    }   
     /* save for next time */
     last_delay = delay;
     last_pts = pts;

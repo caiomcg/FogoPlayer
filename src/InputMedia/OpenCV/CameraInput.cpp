@@ -18,4 +18,7 @@ void CameraInput::open(const std::string& file_name) {
     this->video_source_.set(cv::CAP_PROP_FRAME_WIDTH,860);
     this->video_source_.set(cv::CAP_PROP_FRAME_HEIGHT,480);
     this->video_source_.set(cv::CAP_PROP_FPS, 60);
+    this->video_source_.set(cv::CAP_PROP_BUFFERSIZE, 1);
+
+    std::clog << "Buffer size: " << this->video_source_.get(cv::CAP_PROP_BUFFERSIZE) << std::endl;
 }

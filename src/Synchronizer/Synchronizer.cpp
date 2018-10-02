@@ -11,20 +11,58 @@
 
 #include <regex>
 
-
 #define THRESHOLD 0
+
+struct Median {
+    std::vector<int> values;
+    Median() {
+        
+    }
+    int getMedian() {
+        size_t size = values.size();
+        if (size == 0) {
+            return 0;
+        }
+
+        std::sort(values.begin(), values.end());
+        
+        if (size % 2 == 0) {
+            return (values[size / 2 - 1] + values[size / 2]) / 2;
+        } else {
+            return values[size / 2];
+        }
+    }
+
+    int calculateSD() {
+        float sum = 0.0, mean, standardDeviation = 0.0;
+
+        int i;
+
+        for(i = 0; i < values.size(); i++) {
+            sum += values[i];
+        }
+
+        mean = sum/10;
+
+        for(i = 0; i < values.size(); i++)
+            standardDeviation += pow(values[i] - mean, 2);
+
+        return sqrt(standardDeviation / 10);
+    }
+};
 
 Synchronizer::Synchronizer() : qr_code_finder_() {}
 
 Synchronizer::~Synchronizer() {
     for (auto client : this->clients_) {
+        this->sendData(client.first, 0x02, 0x00);
         close(client.second);
     }
 }
 
 std::pair<std::string, int> Synchronizer::extractInfo(const std::string& source) {
     std::smatch sm;
-    std::regex_match(source, sm, std::regex("q=(\\d+):pts=(\\d+)"));
+    std::regex_match(source, sm, std::regex("Q=(\\d+):PTS=(\\d+)"));
     if (sm.size()) {
         return std::pair<std::string, int>(sm[1], std::stoi(sm[2]));
     }
@@ -45,6 +83,19 @@ void Synchronizer::run(const std::string& file) {
     std::cout << "Synchronizer is running" << std::endl;
     this->input_media_->open(file);
     bool keep_alive = true; // FIXME: Should be atomic global
+
+    int i = 0;
+
+    std::thread([this]() {
+        int x;
+        while (std::cin >> x) {
+            for (auto client : this->clients_) {
+                this->sendData(client.first, 0x02, 0x00);
+            }
+        }
+    }).detach();
+
+    std::vector<Median> clients_median(this->clients_.size());
     
     while (keep_alive) {
         cv::Mat frame = this->input_media_->read();
@@ -52,7 +103,7 @@ void Synchronizer::run(const std::string& file) {
 
         int base_pts = 0;
 
-        if (qr_data.size() == this->clients_.size()) {
+        if (qr_data.size() == this->clients_.size()) { // Adicionar moda + desvio padrao
             // Compare and send adjustments
             std::vector<std::pair<std::string, int>> qrs;
             for (auto qr_info : qr_data) {
@@ -65,7 +116,17 @@ void Synchronizer::run(const std::string& file) {
             }
 
             for (auto client : qrs) {
-                this->sendData(client.first, 0x04, this->dropCount(base_pts, client.second));
+                // Add values to calculate the median
+                clients_median[std::stoi(client.first)].values.push_back(this->dropCount(base_pts, client.second));
+            }
+
+            if ((i = (i+1) % 50) == 0 ) {
+                for (unsigned index = 0; index < clients_median.size(); index++) {
+                    auto median_val = clients_median[index].getMedian();
+                    std::clog << "Sending info to quadrant " << index << " - median: " << median_val  << std::endl;
+                    this->sendData(std::to_string(index), 0x04, median_val);
+                    clients_median[index].values.clear();
+                }
             }
         }
         
@@ -76,14 +137,14 @@ void Synchronizer::run(const std::string& file) {
             auto y1 = std::min(qr_info.location.at(0).y, std::min(qr_info.location.at(1).y, std::min(qr_info.location.at(2).y, qr_info.location.at(3).y))); //top-left pt. is the uppermost of the 4 points
             auto y2 = std::max(qr_info.location.at(0).y, std::max(qr_info.location.at(1).y, std::max(qr_info.location.at(2).y, qr_info.location.at(3).y))); //bottom-right pt. is the lowermost of the 4 points
             cv::rectangle(frame, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(0, 255, 0));
-            std::cout << qr_info.data << " " <<std::endl;
+            std::clog << qr_info.data << " ";
         }
-        
-        #ifndef DEBUG        
+
+        std::clog << std::endl;
+           
         cv::imshow("frame", frame);
         if(cv::waitKey(1) == 27)
             break;
-        #endif
     }
 }
 

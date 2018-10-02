@@ -43,7 +43,7 @@ public:
     Clock(const int& port);
     ~Clock();
 
-    int ptsToRealClock(AVFrame* frame, const int& q2d);
+    int ptsToRealClock(AVFrame* frame, const double& q2d);
     int presentationCotrol();
 
     void setObserver(ClockObserver* observer);
