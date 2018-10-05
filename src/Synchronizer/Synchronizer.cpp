@@ -10,6 +10,8 @@
 #include <algorithm>
 
 #include <regex>
+#include <mutex>
+#include <condition_variable>
 
 #define THRESHOLD 0
 
@@ -19,18 +21,29 @@ struct Median {
         
     }
     int getMedian() {
-        size_t size = values.size();
-        if (size == 0) {
+
+        if (values.size() == 0) {
             return 0;
         }
 
         std::sort(values.begin(), values.end());
-        
-        if (size % 2 == 0) {
-            return (values[size / 2 - 1] + values[size / 2]) / 2;
-        } else {
-            return values[size / 2];
+        int counter = 1;
+        int max = 0;
+        int mode = values[0];
+        for (int pass = 0; pass < values.size() - 1; pass++)
+        {
+           if ( values[pass] == values[pass+1] )
+           {
+              counter++;
+              if ( counter > max )
+              {
+                  max = counter;
+                  mode = values[pass];
+              }
+           } else
+              counter = 1; // reset counter.
         }
+        return mode;
     }
 
     int calculateSD() {
@@ -49,6 +62,70 @@ struct Median {
 
         return sqrt(standardDeviation / 10);
     }
+};
+
+template <typename T>
+class RingBlockingQueue {
+private:
+    std::mutex mutex_;
+    std::condition_variable cond_;
+
+    std::string name_;
+
+    unsigned queue_size_;
+    unsigned head_;
+    unsigned tail_;
+    T* queue_;
+public:
+    RingBlockingQueue(const unsigned& size) : queue_size_{size}, head_{0}, tail_{0} {
+        this->queue_ = new T[size];
+    }
+
+    ~RingBlockingQueue() {
+        if (this->queue_ != nullptr) {
+            delete[] this->queue_;
+        }
+    }
+
+    void setQueueName(const std::string& name) {
+        this->name_ = name;
+    }
+
+    void put(const T& data) {
+        //LOG_D(this->name_ << " Inserting at: " << this->head_);
+        std::unique_lock<std::mutex> lock(this->mutex_);
+        
+        this->queue_[this->head_] = data;
+        this->head_ = (this->head_ + 1) % this->queue_size_;
+
+        if (this->isEmpty()) {
+            this->tail_ = (this->tail_ + 1) % this->queue_size_;
+        }
+
+        lock.unlock();
+        this->cond_.notify_one();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    
+    T take() {
+        //LOG_D(this->name_ << " Taking from:" << this->tail_);
+        std::unique_lock<std::mutex> lock(this->mutex_);
+        
+        while (this->isEmpty()) {
+            this->cond_.wait(lock);
+        }
+    
+        T data = this->queue_[this->tail_];
+        this->tail_ = (this->tail_ + 1) % this->queue_size_;
+        
+        lock.unlock();
+        return data;
+    }
+
+    bool isEmpty() {
+        return this->head_ == this->tail_;
+    }
+    
 };
 
 Synchronizer::Synchronizer() : qr_code_finder_() {}
@@ -84,6 +161,8 @@ void Synchronizer::run(const std::string& file) {
     this->input_media_->open(file);
     bool keep_alive = true; // FIXME: Should be atomic global
 
+    RingBlockingQueue<cv::Mat> queue(60);
+
     int i = 0;
 
     std::thread([this]() {
@@ -95,10 +174,21 @@ void Synchronizer::run(const std::string& file) {
         }
     }).detach();
 
+    std::thread([this, &queue]() {
+        while (true) {
+            cv::Mat frame = this->input_media_->read();
+            queue.put(frame);
+
+            cv::imshow("frame", frame);
+            if(cv::waitKey(1) == 27)
+                break;
+        }
+    }).detach();
+
     std::vector<Median> clients_median(this->clients_.size());
     
     while (keep_alive) {
-        cv::Mat frame = this->input_media_->read();
+        cv::Mat frame = queue.take();
         auto qr_data = this->qr_code_finder_.process(frame);
 
         int base_pts = 0;
@@ -123,28 +213,23 @@ void Synchronizer::run(const std::string& file) {
             if ((i = (i+1) % 50) == 0 ) {
                 for (unsigned index = 0; index < clients_median.size(); index++) {
                     auto median_val = clients_median[index].getMedian();
-                    std::clog << "Sending info to quadrant " << index << " - median: " << median_val  << std::endl;
+                    std::clog << "Sending info to quadrant " << index << " - mode: " << median_val  << std::endl;
                     this->sendData(std::to_string(index), 0x04, median_val);
                     clients_median[index].values.clear();
                 }
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             }
-        }
-        
+            for (auto qr_info : qr_data) {
+                auto x1 = std::min(qr_info.location.at(0).x, std::min(qr_info.location.at(1).x, std::min(qr_info.location.at(2).x, qr_info.location.at(3).x))); // top-left pt. is the leftmost of the 4 points
+                auto x2 = std::max(qr_info.location.at(0).x, std::max(qr_info.location.at(1).x, std::max(qr_info.location.at(2).x, qr_info.location.at(3).x))); // bottom-right pt. is the rightmost of the 4 points
+                auto y1 = std::min(qr_info.location.at(0).y, std::min(qr_info.location.at(1).y, std::min(qr_info.location.at(2).y, qr_info.location.at(3).y))); //top-left pt. is the uppermost of the 4 points
+                auto y2 = std::max(qr_info.location.at(0).y, std::max(qr_info.location.at(1).y, std::max(qr_info.location.at(2).y, qr_info.location.at(3).y))); //bottom-right pt. is the lowermost of the 4 points
+                cv::rectangle(frame, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(0, 255, 0));
+                std::clog << qr_info.data << " ";
+            }    
+            std::clog << std::endl;
 
-        for (auto qr_info : qr_data) {
-            auto x1 = std::min(qr_info.location.at(0).x, std::min(qr_info.location.at(1).x, std::min(qr_info.location.at(2).x, qr_info.location.at(3).x))); // top-left pt. is the leftmost of the 4 points
-            auto x2 = std::max(qr_info.location.at(0).x, std::max(qr_info.location.at(1).x, std::max(qr_info.location.at(2).x, qr_info.location.at(3).x))); // bottom-right pt. is the rightmost of the 4 points
-            auto y1 = std::min(qr_info.location.at(0).y, std::min(qr_info.location.at(1).y, std::min(qr_info.location.at(2).y, qr_info.location.at(3).y))); //top-left pt. is the uppermost of the 4 points
-            auto y2 = std::max(qr_info.location.at(0).y, std::max(qr_info.location.at(1).y, std::max(qr_info.location.at(2).y, qr_info.location.at(3).y))); //bottom-right pt. is the lowermost of the 4 points
-            cv::rectangle(frame, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(0, 255, 0));
-            std::clog << qr_info.data << " ";
         }
-
-        std::clog << std::endl;
-           
-        cv::imshow("frame", frame);
-        if(cv::waitKey(1) == 27)
-            break;
     }
 }
 

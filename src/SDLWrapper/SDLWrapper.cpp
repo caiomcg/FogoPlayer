@@ -155,7 +155,7 @@ void SDLWrapper::run() {
             SDL_RenderCopy(this->renderer_, this->qr_texture_, NULL, &r);
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
+		//std::this_thread::sleep_for(std::chrono::milliseconds(this->clock_.ptsToRealClock(frame, q2d_)));
         SDL_RenderPresent(this->renderer_);
         av_frame_free(&frame);
     }
