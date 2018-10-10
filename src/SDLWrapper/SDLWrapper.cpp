@@ -6,7 +6,7 @@
 #define AV_SYNC_THRESHOLD 0.01
 #define AV_NOSYNC_THRESHOLD 10.0
 
-SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), clock_(8080), is_playing_(true), keep_alive_(true), show_qr_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
+SDLWrapper::SDLWrapper(const std::string& file_name, LibAVInputMedia* input_media, std::shared_ptr<RingQueue<AVFrame*>> decodec_frame_queue, int border_offset) : event_listener(nullptr), clock_(8080), is_playing_(true), keep_alive_(true), show_qr_(false), show_text_(false), border_offset_(border_offset), codec_ctx_(input_media->getCodecContext()), decodec_frame_queue_(decodec_frame_queue) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_ShowCursor(0);
     std::string window_name = file_name + " - FogoPlayer";
@@ -254,7 +254,8 @@ void SDLWrapper::updateVideoRect(SDL_Rect& rect) {
 }
 
 void SDLWrapper::showQR(bool state) {
-    this->show_qr_ = state;
+    this->show_qr_ = this->show_text_ = state;
+
 }
 
 void SDLWrapper::setQ2d(double q2d) {

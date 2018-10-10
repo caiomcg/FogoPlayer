@@ -41,6 +41,7 @@ private:
     bool is_playing_;
     bool keep_alive_;
     bool show_qr_;
+    bool show_text_;
 
     int border_offset_;
     double q2d_;
