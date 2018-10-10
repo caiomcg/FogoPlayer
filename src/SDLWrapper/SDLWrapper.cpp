@@ -146,7 +146,9 @@ void SDLWrapper::run() {
         auto text_surface = TTF_RenderText_Solid(font, info.c_str(), textColor);
         if (text_surface != nullptr) {
             SDL_Texture* message = SDL_CreateTextureFromSurface(this->renderer_, text_surface);
-            SDL_RenderCopy(this->renderer_, message, nullptr, &text_rect);
+            if (this->show_text_) {
+                SDL_RenderCopy(this->renderer_, message, nullptr, &text_rect);
+            }
             SDL_DestroyTexture(message);
             SDL_FreeSurface(text_surface);
         }
