@@ -299,13 +299,15 @@ int Synchronizer::createSocket(const std::string& ip) {
 void Synchronizer::sendData(const std::string& quadrant, int command, int frame_delay) {
     for (auto client : clients_) {
         if (quadrant == client.first) {
-            buffer_[0] = command;
-            buffer_[1] = (frame_delay >> 24) & 0xFF;
-            buffer_[2] = (frame_delay >> 16) & 0xFF;
-            buffer_[3] = (frame_delay >> 8) & 0xFF;
-            buffer_[4] = frame_delay & 0xFF;
+            uint8_t buffer[5];
+            buffer[0] = command;
+            buffer[1] = (frame_delay >> 24) & 0xFF;
+            buffer[2] = (frame_delay >> 16) & 0xFF;
+            buffer[3] = (frame_delay >> 8) & 0xFF;
+            buffer[4] = frame_delay & 0xFF;
 
-            if (send(client.second, buffer_, 5, 0) < 0) {
+            std::clog << "Sendig command: " << command << " to quadrant " << quadrant << " with val: " << frame_delay << std::endl;
+            if (send(client.second, buffer, 5, 0) < 0) {
                 perror("Send failed");
             }
         }

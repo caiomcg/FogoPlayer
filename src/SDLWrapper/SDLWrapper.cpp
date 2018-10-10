@@ -249,10 +249,10 @@ void SDLWrapper::updateVideoRect(SDL_Rect& rect) {
 
     SDL_GetWindowSize(this->window_, &video_width, &video_height);
 
-    rect.x = (border_offset_ != 0 ? -(border_offset_ / 2) : 0);
-    rect.y =  0;
-    rect.w = video_width + border_offset_;
-    rect.h = video_height;
+    rect.x =  0 - border_offset_;//(border_offset_ != 0 ? -(border_offset_ / 2) : 0);
+    rect.y =  0 - border_offset_;
+    rect.w = video_width  + border_offset_ * 2;
+    rect.h = video_height + border_offset_ * 2;
 }
 
 void SDLWrapper::showQR(bool state) {
