@@ -88,7 +88,7 @@ void SDLWrapper::run() {
 
     while ((frame = decodec_frame_queue_->take()) != nullptr && this->keep_alive_) {
         int* frame_num = (int*)frame->opaque;
-        std::string info = "q=" + this->quadrant_ + ":pts=" + std::to_string(*frame_num);
+        std::string info = "q=" + this->quadrant_ + ":frame=" + std::to_string(*frame_num);
         delete frame_num;
 
         if ((control = this->clock_.presentationCotrol()) != 0) {

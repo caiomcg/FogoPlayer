@@ -139,7 +139,7 @@ Synchronizer::~Synchronizer() {
 
 std::pair<std::string, int> Synchronizer::extractInfo(const std::string& source) {
     std::smatch sm;
-    std::regex_match(source, sm, std::regex("Q=(\\d+):PTS=(\\d+)"));
+    std::regex_match(source, sm, std::regex("Q=(\\d+):FRAME=(\\d+)"));
     if (sm.size()) {
         return std::pair<std::string, int>(sm[1], std::stoi(sm[2]));
     }
@@ -213,6 +213,10 @@ void Synchronizer::run(const std::string& file) {
             if ((i = (i+1) % 50) == 0 ) {
                 for (unsigned index = 0; index < clients_median.size(); index++) {
                     auto median_val = clients_median[index].getMedian();
+                    std::clog << "Sending info to quadrant " << index << " - mode: " << median_val  << std::endl;
+                    if (median_val > 0) {
+                        median_val *= 4; // Drop two extra
+                    }
                     std::clog << "Sending info to quadrant " << index << " - mode: " << median_val  << std::endl;
                     this->sendData(std::to_string(index), 0x04, median_val);
                     clients_median[index].values.clear();
